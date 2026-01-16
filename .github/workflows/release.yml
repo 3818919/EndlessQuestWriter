@@ -34,6 +34,7 @@ jobs:
         run: npm run build:renderer
       
       - name: Verify build outputs
+        shell: bash
         run: |
           echo "Checking dist-electron directory:"
           ls -la dist-electron/ || echo "dist-electron not found"
