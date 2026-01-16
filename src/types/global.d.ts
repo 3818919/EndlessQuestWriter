@@ -18,6 +18,11 @@ interface Window {
   showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>;
 }
 
+// Electron extends the File interface with a path property
+interface ElectronFile extends File {
+  path: string;
+}
+
 // File System Access API types (for browser)
 interface FileSystemHandle {
   readonly kind: 'file' | 'directory';

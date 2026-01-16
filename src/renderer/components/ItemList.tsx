@@ -109,9 +109,9 @@ export default function ItemList({
 
     if (isElectron && window.electronAPI) {
       const files = Array.from(e.dataTransfer.files);
-      const eifFile = files.find(f => f.path.endsWith('.eif'));
-      if (eifFile && (eifFile as any).path) {
-        onLoadEIFFromPath((eifFile as any).path);
+      const eifFile = files.find(f => f.name.endsWith('.eif'));
+      if (eifFile && 'path' in eifFile) {
+        onLoadEIFFromPath((eifFile as ElectronFile).path);
       }
     } else {
       const files = Array.from(e.dataTransfer.files);
@@ -145,8 +145,8 @@ export default function ItemList({
       if (items.length > 0) {
         const item = items[0];
         const file = item.getAsFile();
-        if (file && (file as any).path) {
-          let path = (file as any).path;
+        if (file && 'path' in file) {
+          let path = (file as ElectronFile).path;
           const isDir = await window.electronAPI.isDirectory(path);
           if (isDir) {
             onSelectGfxFromPath(path);

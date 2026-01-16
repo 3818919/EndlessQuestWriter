@@ -1,14 +1,41 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
+
+// Set app name before ready event
+app.setName('OakTree');
 
 let mainWindow;
 
 function createWindow() {
+  // Determine icon path based on dev/prod mode and platform
+  const isDev = process.argv.includes('--dev');
+  let iconPath;
+  
+  if (process.platform === 'darwin') {
+    // Use ICNS for macOS
+    iconPath = isDev 
+      ? path.join(process.cwd(), 'assets', 'icon.icns')
+      : path.join(__dirname, '..', 'assets', 'icon.icns');
+  } else if (process.platform === 'win32') {
+    // Use ICO for Windows
+    iconPath = isDev 
+      ? path.join(process.cwd(), 'assets', 'icon.ico')
+      : path.join(__dirname, '..', 'assets', 'icon.ico');
+  } else {
+    // Use PNG for Linux
+    iconPath = isDev 
+      ? path.join(process.cwd(), 'assets', 'icon.png')
+      : path.join(__dirname, '..', 'assets', 'icon.png');
+  }
+
+  const icon = nativeImage.createFromPath(iconPath);
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+    title: 'OakTree',
+    icon: icon,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -17,7 +44,6 @@ function createWindow() {
   });
 
   // Load Vite dev server in development, built files in production
-  const isDev = process.argv.includes('--dev');
   if (isDev) {
     // Wait a moment for Vite to be ready, then try common ports
     setTimeout(() => {
@@ -38,6 +64,18 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Set dock icon for macOS
+  if (process.platform === 'darwin') {
+    const isDev = process.argv.includes('--dev');
+    const iconPath = isDev 
+      ? path.join(process.cwd(), 'assets', 'icon.icns')
+      : path.join(__dirname, '..', 'assets', 'icon.icns');
+    const icon = nativeImage.createFromPath(iconPath);
+    if (!icon.isEmpty()) {
+      app.dock.setIcon(icon);
+    }
+  }
+
   createWindow();
 
   app.on('activate', () => {

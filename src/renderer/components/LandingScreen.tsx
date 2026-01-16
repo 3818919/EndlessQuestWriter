@@ -50,9 +50,9 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
     if (isElectron && window.electronAPI) {
       // In Electron, get the file path from the drag event
       const files = Array.from(e.dataTransfer.files);
-      const eifFile = files.find(f => f.path.endsWith('.eif'));
-      if (eifFile && (eifFile as any).path) {
-        onLoadEIFFromPath((eifFile as any).path);
+      const eifFile = files.find(f => f.name.endsWith('.eif'));
+      if (eifFile && 'path' in eifFile) {
+        onLoadEIFFromPath((eifFile as ElectronFile).path);
       }
     } else {
       // Browser - use File API
@@ -89,8 +89,8 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
         const item = items[0];
         // Try to get the file path
         const file = item.getAsFile();
-        if (file && (file as any).path) {
-          let path = (file as any).path;
+        if (file && 'path' in file) {
+          let path = (file as ElectronFile).path;
           // Check if it's a directory
           const isDir = await window.electronAPI.isDirectory(path);
           if (isDir) {
