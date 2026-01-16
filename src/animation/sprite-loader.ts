@@ -3,7 +3,7 @@
  * Handles loading sprite data from GFX files and creating Image objects
  */
 
-import { GFXLoader } from '../gfx-loader.js';
+import { GFXLoader } from '../gfx-loader';
 import {
   GFX_FILES,
   getBaseArmorGraphic,
@@ -11,13 +11,54 @@ import {
   getBaseShieldGraphic,
   getBaseBootsGraphic,
   getBaseHatGraphic
-} from './constants.js';
+} from './constants';
+
+interface SpriteData {
+  image: HTMLImageElement | null;
+  width: number;
+  height: number;
+}
+
+export interface SkinSpriteSet {
+  standing?: any;
+  walking?: any;
+  attacking?: any;
+  bow?: any;
+  sittingChair?: any;
+  sittingFloor?: any;
+  [key: number]: any;
+}
+
+interface ArmorSpriteSet {
+  standing: any;
+  walkFrames: any[];
+  attackFrames: any[];
+}
+
+export interface WeaponSpriteSet {
+  frames: any[];
+}
+
+export interface ShieldSpriteSet {
+  shield?: {
+    standing: any;
+    attackFrames: any[];
+  } | null;
+  back?: {
+    standing: any;
+    attackFrames: any[];
+  } | null;
+}
 
 /**
  * Load GFX file data
  */
-export async function loadGFXFile(gfxFolder, gfxNumber) {
+export async function loadGFXFile(gfxFolder: string, gfxNumber: number): Promise<Uint8Array | null> {
   try {
+    if (!window.electronAPI) {
+      console.error('Electron API not available');
+      return null;
+    }
     const result = await window.electronAPI.readGFX(gfxFolder, gfxNumber);
     if (!result.success) {
       console.error(`Failed to load GFX ${gfxNumber}:`, result.error);
@@ -33,7 +74,7 @@ export async function loadGFXFile(gfxFolder, gfxNumber) {
 /**
  * Create an Image object from bitmap data with transparency processing
  */
-export function createImageFromData(bitmapData) {
+export function createImageFromData(bitmapData: Uint8Array | null): Promise<HTMLImageElement | null> {
   return new Promise((resolve, reject) => {
     if (!bitmapData) {
       resolve(null);
@@ -110,8 +151,8 @@ export function createImageFromData(bitmapData) {
 /**
  * Load skin sprite sheets from GFX008
  */
-export async function loadSkinSprites(gfxData, skinTone = 0) {
-  const sprites = {};
+export async function loadSkinSprites(gfxData: Uint8Array | null, skinTone: number = 0): Promise<SkinSpriteSet> {
+  const sprites: SkinSpriteSet = {};
   
   // Skin sprites in GFX008 are stored as sprite sheets where each sheet contains
   // all races/skin tones as rows. We load the sheets and use drawSkinSprite to
@@ -120,7 +161,7 @@ export async function loadSkinSprites(gfxData, skinTone = 0) {
   
   // First, try to find what resources exist by scanning
   console.log('Scanning GFX008 for available resources...');
-  const foundResources = [];
+  const foundResources: number[] = [];
   for (let id = 100; id <= 110; id++) {
     const testData = GFXLoader.extractBitmapByID(gfxData, id);
     if (testData) {
@@ -190,7 +231,7 @@ export async function loadSkinSprites(gfxData, skinTone = 0) {
 /**
  * Load hair sprites from GFX009 (male) or GFX010 (female)
  */
-export async function loadHairSprites(gfxData, hairStyle = 0, hairColor = 0, direction = 'down') {
+export async function loadHairSprites(gfxData: Uint8Array | null, hairStyle: number = 0, hairColor: number = 0, direction: string = 'down'): Promise<HTMLImageElement | null> {
   // Hair sprites calculation from EndlessClient:
   // Base graphic: (hairStyle - 1) * 40 + hairColor * 4
   // Direction offset: 0 for down/right, 1 for up/left
@@ -223,7 +264,7 @@ export async function loadHairSprites(gfxData, hairStyle = 0, hairColor = 0, dir
 /**
  * Load armor sprites
  */
-export async function loadArmorSprite(gfxFolder, graphicId, gender = 1) {
+export async function loadArmorSprite(gfxFolder: string, graphicId: number, gender: number = 1): Promise<ArmorSpriteSet | null> {
   if (graphicId === 0) {
     return null;
   }
@@ -295,7 +336,7 @@ export async function loadArmorSprite(gfxFolder, graphicId, gender = 1) {
 /**
  * Load weapon sprites
  */
-export async function loadWeaponSprite(gfxFolder, graphicId, gender = 1) {
+export async function loadWeaponSprite(gfxFolder: string, graphicId: number, gender: number = 1): Promise<WeaponSpriteSet | null> {
   if (graphicId === 0) {
     return null;
   }
@@ -328,7 +369,7 @@ export async function loadWeaponSprite(gfxFolder, graphicId, gender = 1) {
 /**
  * Load back/shield sprites
  */
-export async function loadBackSprite(gfxFolder, graphicId, gender = 1) {
+export async function loadBackSprite(gfxFolder: string, graphicId: number, gender: number = 1): Promise<WeaponSpriteSet | null> {
   if (graphicId === 0) {
     return null;
   }
@@ -340,14 +381,13 @@ export async function loadBackSprite(gfxFolder, graphicId, gender = 1) {
   const baseGraphic = getBaseShieldGraphic(graphicId);
   
   const back = {
-    standing: null,
-    attackFrames: []
+    frames: []
   };
   
   // Load standing sprite (+100 for PE resource ID)
   const standingData = GFXLoader.extractBitmapByID(backData, baseGraphic + 1 + 100);
   if (standingData) {
-    back.standing = await createImageFromData(standingData);
+    back.frames[0] = await createImageFromData(standingData);
     console.log('Loaded back/shield standing sprite');
   } else {
     console.warn('Failed to load back/shield standing sprite (resource', baseGraphic + 1 + 100, ')');
@@ -356,7 +396,7 @@ export async function loadBackSprite(gfxFolder, graphicId, gender = 1) {
   // Load attack frame (ShieldItemOnBack_AttackingWithBow = 3, +100 for PE resource ID)
   const attackData = GFXLoader.extractBitmapByID(backData, baseGraphic + 3 + 100);
   if (attackData) {
-    back.attackFrames[0] = await createImageFromData(attackData);
+    back.frames[1] = await createImageFromData(attackData);
     console.log('Loaded back/shield attack frame');
   } else {
     console.warn('Failed to load back/shield attack frame (resource', baseGraphic + 3 + 100, ')');
@@ -368,7 +408,7 @@ export async function loadBackSprite(gfxFolder, graphicId, gender = 1) {
 /**
  * Load shield sprite (distinguishes between back items and side shields)
  */
-export async function loadShieldSprite(gfxFolder, graphicId, subType = 0, gender = 1) {
+export async function loadShieldSprite(gfxFolder: string, graphicId: number, subType: number = 0, gender: number = 1): Promise<ShieldSpriteSet> {
   if (graphicId === 0) {
     return { shield: null, back: null };
   }
@@ -420,7 +460,7 @@ export async function loadShieldSprite(gfxFolder, graphicId, subType = 0, gender
 /**
  * Load boots sprites
  */
-export async function loadBootsSprite(gfxFolder, graphicId, gender = 1) {
+export async function loadBootsSprite(gfxFolder: string, graphicId: number, gender: number = 1): Promise<ArmorSpriteSet | null> {
   console.log('Loading boots with graphicId:', graphicId);
   if (graphicId === 0) {
     console.log('Boots graphicId is 0, skipping');
@@ -501,7 +541,7 @@ export async function loadBootsSprite(gfxFolder, graphicId, gender = 1) {
 /**
  * Load helmet/hat sprites
  */
-export async function loadHelmetSprite(gfxFolder, graphicId, gender = 1) {
+export async function loadHelmetSprite(gfxFolder: string, graphicId: number, gender: number = 1): Promise<ArmorSpriteSet | null> {
   if (graphicId === 0) {
     return null;
   }

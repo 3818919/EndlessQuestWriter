@@ -7,9 +7,11 @@
  * Source: https://gist.github.com/sorokya/dd4a98fa6a421dce7a71eb26fec119af
  */
 
-import { Gender, CharacterFrame } from './constants.js';
+import { Gender, CharacterFrame, GenderType, CharacterFrameType } from './constants';
 
-export const BOOTS_OFFSETS = {
+type OffsetTable = Record<GenderType, Partial<Record<CharacterFrameType, { x: number; y: number }>>>;
+
+export const BOOTS_OFFSETS: OffsetTable = {
   [Gender.Female]: {
     [CharacterFrame.StandingDownRight]: { x: 0, y: 21 },
     [CharacterFrame.StandingUpLeft]: { x: 0, y: 21 },
@@ -48,7 +50,7 @@ export const BOOTS_OFFSETS = {
   }
 };
 
-export const ARMOR_OFFSETS = {
+export const ARMOR_OFFSETS: OffsetTable = {
   [Gender.Female]: {
     [CharacterFrame.StandingDownRight]: { x: 0, y: -3 },
     [CharacterFrame.StandingUpLeft]: { x: 0, y: -3 },
@@ -87,7 +89,7 @@ export const ARMOR_OFFSETS = {
   }
 };
 
-export const HAT_OFFSETS = {
+export const HAT_OFFSETS: OffsetTable = {
   [Gender.Female]: {
     [CharacterFrame.StandingDownRight]: { x: 0, y: 23 },
     [CharacterFrame.StandingUpLeft]: { x: 0, y: 23 },
@@ -126,7 +128,7 @@ export const HAT_OFFSETS = {
   }
 };
 
-export const WEAPON_OFFSETS = {
+export const WEAPON_OFFSETS: OffsetTable = {
   [Gender.Female]: {
     [CharacterFrame.StandingDownRight]: { x: -9, y: -6 },
     [CharacterFrame.StandingUpLeft]: { x: -9, y: -6 },
@@ -165,7 +167,7 @@ export const WEAPON_OFFSETS = {
   }
 };
 
-export const SHIELD_OFFSETS = {
+export const SHIELD_OFFSETS: OffsetTable = {
   [Gender.Female]: {
     [CharacterFrame.StandingDownRight]: { x: -5, y: 5 },
     [CharacterFrame.StandingUpLeft]: { x: -5, y: 5 },
@@ -204,7 +206,7 @@ export const SHIELD_OFFSETS = {
   }
 };
 
-export const HAIR_OFFSETS = {
+export const HAIR_OFFSETS: OffsetTable = {
   [Gender.Female]: {
     [CharacterFrame.StandingDownRight]: { x: -1, y: -14 },
     [CharacterFrame.StandingUpLeft]: { x: -1, y: -14 },
@@ -243,7 +245,7 @@ export const HAIR_OFFSETS = {
   }
 };
 
-export const BACK_OFFSETS = {
+export const BACK_OFFSETS: OffsetTable = {
   [Gender.Female]: {
     [CharacterFrame.StandingDownRight]: { x: 0, y: -17 },
     [CharacterFrame.StandingUpLeft]: { x: 0, y: -17 },

@@ -1,17 +1,27 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CharacterAnimator } from '../../animation/character-animator.js';
+import { CharacterAnimator } from '../../animation/character-animator';
 
-export default function CharacterPreview({
+interface CharacterPreviewProps {
+  equippedItems: Record<string, any>;
+  gender: number;
+  hairStyle: number;
+  hairColor: number;
+  skinTone: number;
+  loadGfx: (gfxNumber: number, resourceId?: number) => Promise<void>;
+  gfxFolder: string;
+  items: Record<number, any>;
+}
+
+const CharacterPreview: React.FC<CharacterPreviewProps> = ({
   equippedItems,
   gender,
   hairStyle,
   hairColor,
   skinTone,
-  gfxCache,
   loadGfx,
   gfxFolder,
   items
-}) {
+}) => {
   const canvasRef = useRef(null);
   const animatorRef = useRef(null);
   const [animationState, setAnimationState] = useState('walking');
@@ -221,4 +231,6 @@ export default function CharacterPreview({
       )}
     </div>
   );
-}
+};
+
+export default CharacterPreview;

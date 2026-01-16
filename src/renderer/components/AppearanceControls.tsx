@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import HairstyleSelector from './HairstyleSelector.jsx';
-import SkinSelector from './SkinSelector.jsx';
+import HairstyleSelector from './HairstyleSelector';
+import SkinSelector from './SkinSelector';
 
 // Hair color palette (0-indexed)
 const HAIR_COLORS = [

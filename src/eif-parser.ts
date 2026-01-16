@@ -65,6 +65,57 @@ class CRC32 {
 }
 
 class EIFRecord {
+  id: number;
+  names: string[];
+  properties: {
+    graphic: number;
+    type: number;
+    subType: number;
+    special: number;
+    hp: number;
+    tp: number;
+    minDam: number;
+    maxDam: number;
+    accuracy: number;
+    evade: number;
+    armor: number;
+    str: number;
+    int: number;
+    wis: number;
+    agi: number;
+    con: number;
+    cha: number;
+    light: number;
+    dark: number;
+    earth: number;
+    air: number;
+    water: number;
+    fire: number;
+    scrollMap: number;
+    dollGraphic: number;
+    expReward: number;
+    hairColor: number;
+    effect: number;
+    key: number;
+    beerPotency: number;
+    scrollX: number;
+    scrollY: number;
+    dualWieldDollGraphic: number;
+    gender: number;
+    levelReq: number;
+    classReq: number;
+    strReq: number;
+    intReq: number;
+    wisReq: number;
+    agiReq: number;
+    conReq: number;
+    chaReq: number;
+    element: number;
+    elementPower: number;
+    weight: number;
+    size: number;
+  };
+  
   constructor(id = 0, name = '') {
     this.id = id;
     this.names = [name];

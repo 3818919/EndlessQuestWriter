@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { loadGFXFile, createImageFromData } from '../../animation/sprite-loader.js';
-import { GFX_FILES } from '../../animation/constants.js';
-import { GFXLoader } from '../../gfx-loader.js';
+import { loadGFXFile, createImageFromData } from '../../animation/sprite-loader';
+import { GFX_FILES } from '../../animation/constants';
+import { GFXLoader } from '../../gfx-loader';
 
 export default function HairstyleSelector({
   gender,

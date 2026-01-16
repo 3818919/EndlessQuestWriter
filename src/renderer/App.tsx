@@ -10,9 +10,9 @@ import { useEquipment } from './hooks/useEquipment';
 import { useAppearance } from './hooks/useAppearance';
 
 // Check if running in Electron
-const isElectron = typeof window !== 'undefined' && window.electronAPI;
+const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
 
-function App() {
+const App: React.FC = () => {
   const [gfxFolder, setGfxFolder] = useState(
     localStorage.getItem('gfxFolder') || ''
   );
@@ -35,14 +35,14 @@ function App() {
     updateItem
   } = useEIFData();
 
-  const { gfxCache, loadGfx, saveDirHandle } = useGFXCache(gfxFolder);
+  const { loadGfx, saveDirHandle } = useGFXCache(gfxFolder);
   
   const selectGfxFolder = async () => {
     try {
       if (!isElectron) {
         // Browser: Use File System Access API
         if ('showDirectoryPicker' in window) {
-          const dirHandle = await window.showDirectoryPicker();
+          const dirHandle = await (window as any).showDirectoryPicker();
           
           // Save the handle to IndexedDB for persistence
           await saveDirHandle(dirHandle);
@@ -54,6 +54,11 @@ function App() {
         } else {
           alert('Folder selection requires a modern browser (Chrome 86+, Edge 86+). For full functionality, use the Electron app: npm run dev');
         }
+        return;
+      }
+      
+      if (!window.electronAPI) {
+        alert('Electron API not available');
         return;
       }
       
@@ -154,7 +159,6 @@ function App() {
             <ItemEditor
               item={selectedItem}
               onUpdateItem={updateItem}
-              gfxCache={gfxCache}
               loadGfx={loadGfx}
               gfxFolder={gfxFolder}
               onSetGfxFolder={setGfxFolder}
@@ -228,7 +232,6 @@ function App() {
                 hairStyle={hairStyle}
                 hairColor={hairColor}
                 skinTone={skinTone}
-                gfxCache={gfxCache}
                 loadGfx={loadGfx}
                 gfxFolder={gfxFolder}
                 items={eifData.items}

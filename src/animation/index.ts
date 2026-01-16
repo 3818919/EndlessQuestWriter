@@ -5,7 +5,7 @@
  */
 
 // Main animator class
-export { CharacterAnimator } from './character-animator.js';
+export { CharacterAnimator } from './character-animator';
 
 // Constants and enums
 export {
@@ -19,7 +19,7 @@ export {
   getBaseShieldGraphic,
   getBaseBootsGraphic,
   getBaseHatGraphic
-} from './constants.js';
+} from './constants';
 
 // Offset tables
 export {
@@ -30,7 +30,7 @@ export {
   SHIELD_OFFSETS,
   HAIR_OFFSETS,
   BACK_OFFSETS
-} from './offsets.js';
+} from './offsets';
 
 // Sprite loading utilities
 export {
@@ -44,7 +44,7 @@ export {
   loadShieldSprite,
   loadBootsSprite,
   loadHelmetSprite
-} from './sprite-loader.js';
+} from './sprite-loader';
 
 // Rendering functions
 export {
@@ -55,4 +55,4 @@ export {
   drawStanding,
   drawWalking,
   drawAttacking
-} from './renderer.js';
+} from './renderer';

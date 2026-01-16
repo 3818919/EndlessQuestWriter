@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { EIFParser, EIFRecord } from '../../eif-parser.js';
+import { EIFParser, EIFRecord } from '../../eif-parser';
 
 // Check if running in Electron
 const isElectron = typeof window !== 'undefined' && window.electronAPI;
@@ -17,7 +17,7 @@ export function useEIFData() {
       let fileData;
       let filePath;
 
-      if (isElectron) {
+      if (isElectron && window.electronAPI) {
         // Electron: Use native file dialog
         filePath = await window.electronAPI.openFile([
           { name: 'Item Files', extensions: ['eif'] },
@@ -39,8 +39,11 @@ export function useEIFData() {
         input.type = 'file';
         input.accept = '.eif';
         
-        const file = await new Promise((resolve) => {
-          input.onchange = (e) => resolve(e.target.files[0]);
+        const file = await new Promise<File | null>((resolve) => {
+          input.onchange = (e) => {
+            const target = e.target as HTMLInputElement;
+            resolve(target.files?.[0] || null);
+          };
           input.click();
         });
         
@@ -129,6 +132,11 @@ export function useEIFData() {
 
     try {
       if (!filePath) return;
+
+      if (!window.electronAPI) {
+        console.error('Electron API not available');
+        return;
+      }
 
       const response = await window.electronAPI.readFile(filePath);
       
@@ -229,7 +237,7 @@ export function useEIFData() {
 
     try {
       // Convert flattened items back to EIFRecord format for serialization
-      const records = Object.values(eifData.items).map(item => {
+      const records = Object.values(eifData.items).map((item: any) => {
         // Use the stored _record if available, otherwise create new
         const record = item._record || new EIFRecord(item.id, item.name);
         
@@ -276,7 +284,7 @@ export function useEIFData() {
       
       const fileData = EIFParser.serialize(dataToSave);
       
-      if (isElectron) {
+      if (isElectron && window.electronAPI) {
         // Electron: Save using native file API
         await window.electronAPI.writeFile(currentFile, fileData);
         alert('File saved successfully!');

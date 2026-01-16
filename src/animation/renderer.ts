@@ -11,19 +11,30 @@ import {
   SHIELD_OFFSETS,
   HAIR_OFFSETS,
   BACK_OFFSETS
-} from './offsets.js';
+} from './offsets';
 
 import {
   Gender,
   CharacterFrame,
   WEAPON_VISIBLE,
-  WEAPON_FRAME_MAP
-} from './constants.js';
+  WEAPON_FRAME_MAP,
+  GenderType,
+  CharacterFrameType
+} from './constants';
+
+interface SpriteData {
+  image: HTMLImageElement | null;
+  width: number;
+  height: number;
+}
+
+type AnimationState = 'standing' | 'walking' | 'attacking' | 'sitting' | 'spell';
+type Direction = 'down' | 'up' | 'left' | 'right';
 
 /**
  * Get the current CharacterFrame enum value based on state, direction, and frame
  */
-export function getCurrentCharacterFrame(state, direction, currentFrame) {
+export function getCurrentCharacterFrame(state: AnimationState, direction: Direction, currentFrame: number): CharacterFrameType {
   if (state === 'standing') {
     // Standing: only 2 frames (down/right or up/left based on direction)
     return direction === 'down' || direction === 'right' 
@@ -33,12 +44,12 @@ export function getCurrentCharacterFrame(state, direction, currentFrame) {
     // Walking: 4 frames per direction
     const isDownRight = direction === 'down' || direction === 'right';
     const baseFrame = isDownRight ? CharacterFrame.WalkingDownRight1 : CharacterFrame.WalkingUpLeft1;
-    return baseFrame + currentFrame;
+    return (baseFrame + currentFrame) as CharacterFrameType;
   } else if (state === 'attacking') {
     // Attacking: 2 frames per direction
     const isDownRight = direction === 'down' || direction === 'right';
     const baseFrame = isDownRight ? CharacterFrame.MeleeAttackDownRight1 : CharacterFrame.MeleeAttackUpLeft1;
-    return baseFrame + currentFrame;
+    return (baseFrame + currentFrame) as CharacterFrameType;
   }
   return CharacterFrame.StandingDownRight; // default
 }
@@ -46,7 +57,13 @@ export function getCurrentCharacterFrame(state, direction, currentFrame) {
 /**
  * Get offset for a specific equipment type
  */
-export function getEquipmentOffset(offsetTable, gender, state, direction, currentFrame) {
+export function getEquipmentOffset(
+  offsetTable: Record<GenderType, Partial<Record<CharacterFrameType, { x: number; y: number }>>>,
+  gender: GenderType,
+  state: AnimationState,
+  direction: Direction,
+  currentFrame: number
+): { x: number; y: number } {
   const frame = getCurrentCharacterFrame(state, direction, currentFrame);
   const genderKey = gender === 0 ? Gender.Female : Gender.Male;
   const offset = offsetTable?.[genderKey]?.[frame];
@@ -56,7 +73,18 @@ export function getEquipmentOffset(offsetTable, gender, state, direction, curren
 /**
  * Draw a sprite from a sprite sheet (for skin with multiple rows/columns)
  */
-export function drawSkinSprite(ctx, img, centerX, centerY, frame, gender, skinTone, direction, totalColumns, zoomLevel) {
+export function drawSkinSprite(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement | null,
+  centerX: number,
+  centerY: number,
+  frame: number,
+  gender: GenderType,
+  skinTone: number,
+  direction: Direction,
+  totalColumns: number,
+  zoomLevel: number
+): void {
   if (!img) return;
   
   // Skin sprite sheets are organized in a grid
@@ -91,7 +119,15 @@ export function drawSkinSprite(ctx, img, centerX, centerY, frame, gender, skinTo
 /**
  * Draw a single sprite with offset
  */
-export function drawSprite(ctx, img, centerX, centerY, offsetX, offsetY, zoomLevel) {
+export function drawSprite(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement | null,
+  centerX: number,
+  centerY: number,
+  offsetX: number,
+  offsetY: number,
+  zoomLevel: number
+): void {
   if (!img) return;
   
   const scaledWidth = img.width * zoomLevel;
@@ -105,7 +141,18 @@ export function drawSprite(ctx, img, centerX, centerY, offsetX, offsetY, zoomLev
 /**
  * Draw standing pose layers
  */
-export function drawStanding(ctx, sprites, gender, skinTone, direction, state, currentFrame, zoomLevel, centerX, centerY) {
+export function drawStanding(
+  ctx: CanvasRenderingContext2D,
+  sprites: any,
+  gender: GenderType,
+  skinTone: number,
+  direction: Direction,
+  state: AnimationState,
+  currentFrame: number,
+  zoomLevel: number,
+  centerX: number,
+  centerY: number
+): void {
   // Render order (bottom to top):
   // 1. Back items (wings, arrows, quiver)
   // 2. Skin
@@ -140,9 +187,10 @@ export function drawStanding(ctx, sprites, gender, skinTone, direction, state, c
   }
   
   // Layer 5: Weapon standing
-  if (sprites.weapon?.frames && WEAPON_VISIBLE[currentFrame]) {
-    const weaponFrameIndex = WEAPON_FRAME_MAP[currentFrame];
-    if (sprites.weapon.frames[weaponFrameIndex]) {
+  const frameType = currentFrame as CharacterFrameType;
+  if (sprites.weapon?.frames && WEAPON_VISIBLE[frameType]) {
+    const weaponFrameIndex = WEAPON_FRAME_MAP[frameType];
+    if (weaponFrameIndex !== undefined && sprites.weapon.frames[weaponFrameIndex]) {
       const offset = getEquipmentOffset(WEAPON_OFFSETS, gender, state, direction, currentFrame);
       drawSprite(ctx, sprites.weapon.frames[weaponFrameIndex], centerX, centerY, offset.x, offset.y, zoomLevel);
     }
@@ -170,7 +218,18 @@ export function drawStanding(ctx, sprites, gender, skinTone, direction, state, c
 /**
  * Draw walking animation layers
  */
-export function drawWalking(ctx, sprites, gender, skinTone, direction, state, currentFrame, zoomLevel, centerX, centerY) {
+export function drawWalking(
+  ctx: CanvasRenderingContext2D,
+  sprites: any,
+  gender: GenderType,
+  skinTone: number,
+  direction: Direction,
+  state: AnimationState,
+  currentFrame: number,
+  zoomLevel: number,
+  centerX: number,
+  centerY: number
+): void {
   // Layer 1: Back items
   if (sprites.back?.standing) {
     const offset = getEquipmentOffset(BACK_OFFSETS, gender, state, direction, currentFrame);
@@ -195,9 +254,10 @@ export function drawWalking(ctx, sprites, gender, skinTone, direction, state, cu
   }
   
   // Layer 5: Weapon
-  if (sprites.weapon?.frames && WEAPON_VISIBLE[currentFrame]) {
-    const weaponFrameIndex = WEAPON_FRAME_MAP[currentFrame];
-    if (sprites.weapon.frames[weaponFrameIndex]) {
+  const walkFrameType = getCurrentCharacterFrame(state, direction, currentFrame);
+  if (sprites.weapon?.frames && WEAPON_VISIBLE[walkFrameType]) {
+    const weaponFrameIndex = WEAPON_FRAME_MAP[walkFrameType];
+    if (weaponFrameIndex !== undefined && sprites.weapon.frames[weaponFrameIndex]) {
       const offset = getEquipmentOffset(WEAPON_OFFSETS, gender, state, direction, currentFrame);
       drawSprite(ctx, sprites.weapon.frames[weaponFrameIndex], centerX, centerY, offset.x, offset.y, zoomLevel);
     }
@@ -229,7 +289,19 @@ export function drawWalking(ctx, sprites, gender, skinTone, direction, state, cu
 /**
  * Draw attacking animation layers
  */
-export function drawAttacking(ctx, sprites, gender, skinTone, direction, state, currentFrame, armorFrame, zoomLevel, centerX, centerY) {
+export function drawAttacking(
+  ctx: CanvasRenderingContext2D,
+  sprites: any,
+  gender: GenderType,
+  skinTone: number,
+  direction: Direction,
+  state: AnimationState,
+  currentFrame: number,
+  armorFrame: number,
+  zoomLevel: number,
+  centerX: number,
+  centerY: number
+): void {
   // Layer 1: Draw back item first (behind character)
   if (sprites.back?.attackFrames && sprites.back.attackFrames[0]) {
     const offset = getEquipmentOffset(BACK_OFFSETS, gender, state, direction, currentFrame);
@@ -291,9 +363,10 @@ export function drawAttacking(ctx, sprites, gender, skinTone, direction, state, 
   
   // Layer 5: Draw weapon attacking frame (on top of everything)
   // Special case: MeleeAttackDownRight2 (frame 11) uses weapon frame 16 (graphicId + 17) drawn on top
-  if (sprites.weapon?.frames && WEAPON_VISIBLE[currentFrame]) {
-    const weaponFrameIndex = WEAPON_FRAME_MAP[currentFrame];
-    if (sprites.weapon.frames[weaponFrameIndex]) {
+  const attackFrameType = getCurrentCharacterFrame(state, direction, currentFrame);
+  if (sprites.weapon?.frames && WEAPON_VISIBLE[attackFrameType]) {
+    const weaponFrameIndex = WEAPON_FRAME_MAP[attackFrameType];
+    if (weaponFrameIndex !== undefined && sprites.weapon.frames[weaponFrameIndex]) {
       const offset = getEquipmentOffset(WEAPON_OFFSETS, gender, state, direction, currentFrame);
       drawSprite(ctx, sprites.weapon.frames[weaponFrameIndex], centerX, centerY, offset.x, offset.y, zoomLevel);
     }
@@ -310,7 +383,19 @@ export function drawAttacking(ctx, sprites, gender, skinTone, direction, state, 
  * Draw sitting animation layers
  * Sitting has two modes: chair (frame 16/17) and floor (frame 18/19)
  */
-export function drawSitting(ctx, sprites, gender, skinTone, direction, state, currentFrame, sittingType, zoomLevel, centerX, centerY) {
+export function drawSitting(
+  ctx: CanvasRenderingContext2D,
+  sprites: any,
+  gender: GenderType,
+  skinTone: number,
+  direction: Direction,
+  state: AnimationState,
+  currentFrame: number,
+  sittingType: string,
+  zoomLevel: number,
+  centerX: number,
+  centerY: number
+): void {
   // Determine which skin sprite sheet to use (chair or floor)
   const skinSheet = sittingType === 'floor' ? sprites.skin?.sittingFloor : sprites.skin?.sittingChair;
   
@@ -360,7 +445,18 @@ export function drawSitting(ctx, sprites, gender, skinTone, direction, state, cu
  * Draw spell casting animation layers
  * Spell animation alternates between standing (frame 0/1) and raised hand (frame 14/15)
  */
-export function drawSpell(ctx, sprites, gender, skinTone, direction, state, currentFrame, zoomLevel, centerX, centerY) {
+export function drawSpell(
+  ctx: CanvasRenderingContext2D,
+  sprites: any,
+  gender: GenderType,
+  skinTone: number,
+  direction: Direction,
+  state: AnimationState,
+  currentFrame: number,
+  zoomLevel: number,
+  centerX: number,
+  centerY: number
+): void {
   // Layer 1: Draw back item first (behind character)
   if (sprites.back?.standing) {
     const offset = getEquipmentOffset(BACK_OFFSETS, gender, state, direction, currentFrame);
@@ -403,9 +499,13 @@ export function drawSpell(ctx, sprites, gender, skinTone, direction, state, curr
   }
   
   // Layer 7: Weapon (spell casting uses raised hand weapon frames)
-  if (sprites.weapon?.frames && WEAPON_VISIBLE[currentFrame]) {
-    const weaponFrameIndex = WEAPON_FRAME_MAP[currentFrame];
-    if (sprites.weapon.frames[weaponFrameIndex]) {
+  const spellFrameType = currentFrame === 0 
+    ? (direction === 'down' || direction === 'right' ? CharacterFrame.RaisedHandDownRight : CharacterFrame.RaisedHandUpLeft)
+    : (direction === 'down' || direction === 'right' ? CharacterFrame.StandingDownRight : CharacterFrame.StandingUpLeft);
+  
+  if (sprites.weapon?.frames && WEAPON_VISIBLE[spellFrameType]) {
+    const weaponFrameIndex = WEAPON_FRAME_MAP[spellFrameType];
+    if (weaponFrameIndex !== undefined && sprites.weapon.frames[weaponFrameIndex]) {
       const offset = getEquipmentOffset(WEAPON_OFFSETS, gender, state, direction, currentFrame);
       drawSprite(ctx, sprites.weapon.frames[weaponFrameIndex], centerX, centerY, offset.x, offset.y, zoomLevel);
     }

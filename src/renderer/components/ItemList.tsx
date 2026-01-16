@@ -44,6 +44,20 @@ export default function ItemList({
   gfxFolder,
   loadGfx,
   onEquipItem
+}: {
+  items: Record<number, any>;
+  selectedItemId: number | null;
+  onSelectItem: (id: number) => void;
+  onAddItem: () => void;
+  onDeleteItem: (id: number) => void;
+  onDuplicateItem: (id: number) => void;
+  onLoadFile: () => void;
+  onSaveFile: () => void;
+  currentFile: string | null;
+  onSelectGfxFolder: () => void;
+  gfxFolder: string | null;
+  loadGfx: (gfxNumber: number, resourceId?: number) => Promise<any>;
+  onEquipItem?: (item: any) => void;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');

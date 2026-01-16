@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { GFXLoader } from '../../gfx-loader.js';
+import { GFXLoader } from '../../gfx-loader';
 
 // Check if running in Electron
 const isElectron = typeof window !== 'undefined' && window.electronAPI;
@@ -8,13 +8,13 @@ const isElectron = typeof window !== 'undefined' && window.electronAPI;
 const DB_NAME = 'OakTreeDB';
 const STORE_NAME = 'directoryHandles';
 
-async function openDB() {
+async function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
     request.onupgradeneeded = (event) => {
-      const db = event.target.result;
+      const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
       }
@@ -22,7 +22,7 @@ async function openDB() {
   });
 }
 
-async function saveDirHandle(handle) {
+async function saveDirHandle(handle: FileSystemDirectoryHandle): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([STORE_NAME], 'readwrite');
@@ -70,7 +70,7 @@ export function useGFXCache(gfxFolder) {
       if (!gfxFileCache.current[gfxNumber]) {
         let gfxData;
         
-        if (isElectron) {
+        if (isElectron && window.electronAPI) {
           // Electron: Use IPC to read file
           const result = await window.electronAPI.readGFX(gfxFolder, gfxNumber);
           

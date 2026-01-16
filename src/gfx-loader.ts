@@ -5,6 +5,8 @@
  */
 
 class GFXLoader {
+  cache: Map<any, any>;
+  
   constructor() {
     this.cache = new Map();
   }

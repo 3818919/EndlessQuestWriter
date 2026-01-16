@@ -8,8 +8,9 @@
 import {
   ITEM_TYPE,
   GFX_FILES,
-  ANIMATION_TIMING
-} from './constants.js';
+  ANIMATION_TIMING,
+  GenderType
+} from './constants';
 
 import {
   loadGFXFile as _loadGFXFile,
@@ -20,8 +21,10 @@ import {
   loadBackSprite as _loadBackSprite,
   loadShieldSprite as _loadShieldSprite,
   loadBootsSprite as _loadBootsSprite,
-  loadHelmetSprite as _loadHelmetSprite
-} from './sprite-loader.js';
+  loadHelmetSprite as _loadHelmetSprite,
+  SkinSpriteSet,
+  WeaponSpriteSet
+} from './sprite-loader';
 
 import {
   drawStanding,
@@ -29,13 +32,65 @@ import {
   drawAttacking,
   drawSitting,
   drawSpell
-} from './renderer.js';
+} from './renderer';
+
+interface SpriteData {
+  image: HTMLImageElement | null;
+  width: number;
+  height: number;
+}
+
+interface CharacterSprites {
+  skin: SkinSpriteSet | null;
+  hair: HTMLImageElement | null;
+  boots: { standing: any; walkFrames: any[]; attackFrames: any[] } | null;
+  armor: { standing: any; walkFrames: any[]; attackFrames: any[] } | null;
+  weapon: WeaponSpriteSet | null;
+  back: WeaponSpriteSet | null;
+  shield: { standing: any; attackFrames: any[] } | null;
+  helmet: { standing: any; walkFrames: any[]; attackFrames: any[] } | null;
+}
+
+type AnimationState = 'standing' | 'walking' | 'attacking' | 'spell' | 'sitting';
+type Direction = 'down' | 'up' | 'left' | 'right';
+type SittingType = 'chair' | 'floor';
 
 /**
  * CharacterAnimator class
  * Manages character sprite animation and rendering
  */
 class CharacterAnimator {
+  canvas: HTMLCanvasElement | null;
+  ctx: CanvasRenderingContext2D | null;
+  animationFrame: number | null;
+  currentFrame: number;
+  frameTimer: number;
+  armorFrame: number;
+  state: AnimationState;
+  direction: Direction;
+  sittingType: SittingType;
+  zoomLevel: number;
+  gender: GenderType;
+  hairStyle: number;
+  hairColor: number;
+  skinTone: number;
+  
+  GFX_SKIN: number;
+  GFX_MALE_HAIR: number;
+  GFX_FEMALE_HAIR: number;
+  GFX_MALE_BOOTS: number;
+  GFX_FEMALE_BOOTS: number;
+  GFX_MALE_ARMOR: number;
+  GFX_FEMALE_ARMOR: number;
+  GFX_MALE_HAT: number;
+  GFX_FEMALE_HAT: number;
+  GFX_MALE_WEAPONS: number;
+  GFX_FEMALE_WEAPONS: number;
+  GFX_MALE_BACK: number;
+  GFX_FEMALE_BACK: number;
+  
+  sprites: CharacterSprites;
+  
   constructor() {
     this.canvas = null;
     this.ctx = null;
@@ -81,50 +136,52 @@ class CharacterAnimator {
   }
   
   // Wrapper methods for backward compatibility with existing code
-  async loadGFXFile(gfxFolder, gfxNumber) {
+  async loadGFXFile(gfxFolder: string, gfxNumber: number) {
     return _loadGFXFile(gfxFolder, gfxNumber);
   }
   
-  async loadSkinSprites(gfxData, skinTone = 0) {
+  async loadSkinSprites(gfxData: Uint8Array | null, skinTone: number = 0) {
     return _loadSkinSprites(gfxData, skinTone);
   }
   
-  async loadHairSprites(gfxData, hairStyle = 0, hairColor = 0, direction = 'down') {
+  async loadHairSprites(gfxData: Uint8Array | null, hairStyle: number = 0, hairColor: number = 0, direction: string = 'down') {
     return _loadHairSprites(gfxData, hairStyle, hairColor, direction);
   }
   
-  async loadArmorSprite(gfxFolder, graphicId, gender = 1) {
+  async loadArmorSprite(gfxFolder: string, graphicId: number, gender: number = 1) {
     const result = await _loadArmorSprite(gfxFolder, graphicId, gender);
     this.sprites.armor = result;
     return result;
   }
   
-  async loadWeaponSprite(gfxFolder, graphicId, gender) {
+  async loadWeaponSprite(gfxFolder: string, graphicId: number, gender?: number) {
     const result = await _loadWeaponSprite(gfxFolder, graphicId, gender ?? this.gender);
     this.sprites.weapon = result;
     return result;
   }
   
-  async loadBackSprite(gfxFolder, graphicId, gender) {
+  async loadBackSprite(gfxFolder: string, graphicId: number, gender?: number) {
     const result = await _loadBackSprite(gfxFolder, graphicId, gender ?? this.gender);
     this.sprites.back = result;
     return result;
   }
   
-  async loadShieldSprite(gfxFolder, graphicId, subType = 0, gender) {
+  async loadShieldSprite(gfxFolder: string, graphicId: number, subType: number = 0, gender?: number) {
     const result = await _loadShieldSprite(gfxFolder, graphicId, subType, gender ?? this.gender);
-    if (result.shield) this.sprites.shield = result.shield;
-    if (result.back) this.sprites.back = result.back;
+    if (result && typeof result === 'object') {
+      if ('shield' in result) this.sprites.shield = result as any;
+      if ('back' in result) this.sprites.back = result as any;
+    }
     return result;
   }
   
-  async loadBootsSprite(gfxFolder, graphicId, gender) {
+  async loadBootsSprite(gfxFolder: string, graphicId: number, gender?: number) {
     const result = await _loadBootsSprite(gfxFolder, graphicId, gender ?? this.gender);
     this.sprites.boots = result;
     return result;
   }
   
-  async loadHelmetSprite(gfxFolder, graphicId, gender) {
+  async loadHelmetSprite(gfxFolder: string, graphicId: number, gender?: number) {
     const result = await _loadHelmetSprite(gfxFolder, graphicId, gender ?? this.gender);
     this.sprites.helmet = result;
     return result;
@@ -133,16 +190,18 @@ class CharacterAnimator {
   /**
    * Initialize the animator with a canvas element
    */
-  initialize(canvasElement) {
+  initialize(canvasElement: HTMLCanvasElement) {
     this.canvas = canvasElement;
     this.ctx = this.canvas.getContext('2d');
-    this.ctx.imageSmoothingEnabled = false; // Pixel-perfect rendering
+    if (this.ctx) {
+      this.ctx.imageSmoothingEnabled = false; // Pixel-perfect rendering
+    }
   }
   
   /**
    * Set zoom level (1x-4x)
    */
-  setZoom(level) {
+  setZoom(level: number) {
     this.zoomLevel = Math.max(1, Math.min(4, level));
     if (!this.animationFrame) {
       this.render(); // Re-render if not animating
@@ -159,11 +218,11 @@ class CharacterAnimator {
   /**
    * Load character sprites based on item type
    */
-  async loadCharacterSprites(gfxFolder, itemType, graphicId, gender = 1) {
+  async loadCharacterSprites(gfxFolder: string, itemType: number, graphicId: number, gender: number = 1) {
     console.log('Loading character sprites:', { gfxFolder, itemType, graphicId, gender });
     
     // Store gender for use in sprite rendering
-    this.gender = gender;
+    this.gender = gender as GenderType;
     
     // Always load skin
     const skinData = await _loadGFXFile(gfxFolder, GFX_FILES.SKIN);

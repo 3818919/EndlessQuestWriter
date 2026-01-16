@@ -7,7 +7,9 @@
 export const Gender = {
   Female: 0,
   Male: 1
-};
+} as const;
+
+export type GenderType = typeof Gender[keyof typeof Gender];
 
 // Character frame enum - matches the offset tables
 // Represents all possible character poses/actions
@@ -34,7 +36,9 @@ export const CharacterFrame = {
   FloorUpLeft: 19,
   RangeAttackDownRight: 20,
   RangeAttackUpLeft: 21
-};
+} as const;
+
+export type CharacterFrameType = typeof CharacterFrame[keyof typeof CharacterFrame];
 
 // GFX file numbers (from EndlessClient GFXTypes.cs - see GFX_FILE_REFERENCE.md)
 export const GFX_FILES = {
@@ -62,7 +66,7 @@ export const ANIMATION_TIMING = {
 };
 
 // Weapon visibility by character frame (weapons are hidden when sitting)
-export const WEAPON_VISIBLE = {
+export const WEAPON_VISIBLE: Record<CharacterFrameType, boolean> = {
   [CharacterFrame.StandingDownRight]: true,
   [CharacterFrame.StandingUpLeft]: true,
   [CharacterFrame.WalkingDownRight1]: true,
@@ -88,7 +92,7 @@ export const WEAPON_VISIBLE = {
 };
 
 // Weapon sprite frame mapping by character frame
-export const WEAPON_FRAME_MAP = {
+export const WEAPON_FRAME_MAP: Partial<Record<CharacterFrameType, number>> = {
   [CharacterFrame.StandingDownRight]: 0,
   [CharacterFrame.StandingUpLeft]: 1,
   [CharacterFrame.WalkingDownRight1]: 2,
@@ -137,30 +141,30 @@ export const ITEM_TYPE = {
   EFFECT_POTION: 23,
   HAIR_DYE: 24,
   CURL: 25
-};
+} as const;
 
 // Base graphic calculation functions
-export function getBaseArmorGraphic(graphicId) {
+export function getBaseArmorGraphic(graphicId: number): number {
   // Each armor has 50 sprites (various states and directions)
   return (graphicId - 1) * 50;
 }
 
-export function getBaseWeaponGraphic(graphicId) {
+export function getBaseWeaponGraphic(graphicId: number): number {
   // Each weapon has 100 sprites
   return (graphicId - 1) * 100;
 }
 
-export function getBaseShieldGraphic(graphicId) {
+export function getBaseShieldGraphic(graphicId: number): number {
   // Each shield/back item has 50 sprites
   return (graphicId - 1) * 50;
 }
 
-export function getBaseBootsGraphic(graphicId) {
+export function getBaseBootsGraphic(graphicId: number): number {
   // Each boots item has 40 sprites (not 50 like other equipment)
   return (graphicId - 1) * 40;
 }
 
-export function getBaseHatGraphic(graphicId) {
+export function getBaseHatGraphic(graphicId: number): number {
   // Each hat has 50 sprites
   return (graphicId - 1) * 50;
 }

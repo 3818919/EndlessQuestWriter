@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { GFXLoader } from '../../gfx-loader.js';
-import { loadGFXFile, createImageFromData } from '../../animation/sprite-loader.js';
+import { GFXLoader } from '../../gfx-loader';
+import { loadGFXFile, createImageFromData } from '../../animation/sprite-loader';
 
 const SKIN_TONES = [
   { id: 0, name: 'White' },

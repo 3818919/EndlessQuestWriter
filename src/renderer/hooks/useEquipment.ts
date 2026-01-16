@@ -1,5 +1,16 @@
 import { useState, useCallback } from 'react';
 
+interface Item {
+  id: number;
+  name: string;
+  type: number;
+  graphic: number;
+  [key: string]: any;
+}
+
+type SlotName = string;
+type EquippedItems = Record<SlotName, Item>;
+
 // Equipment slot definitions
 export const EQUIPMENT_SLOTS = {
   WEAPON: 'weapon',
@@ -17,10 +28,10 @@ export const EQUIPMENT_SLOTS = {
   BRACER_1: 'bracer1',
   BRACER_2: 'bracer2',
   GEM: 'gem'
-};
+} as const;
 
 // Item type to slot mapping
-export const ITEM_TYPE_TO_SLOT = {
+export const ITEM_TYPE_TO_SLOT: Record<number, string | null> = {
   10: EQUIPMENT_SLOTS.WEAPON,     // WEAPON
   11: EQUIPMENT_SLOTS.SHIELD,     // SHIELD
   12: EQUIPMENT_SLOTS.ARMOR,      // ARMOR
@@ -36,12 +47,12 @@ export const ITEM_TYPE_TO_SLOT = {
 };
 
 export function useEquipment() {
-  const [equippedItems, setEquippedItems] = useState({});
+  const [equippedItems, setEquippedItems] = useState<EquippedItems>({});
 
-  const equipItem = useCallback((item, targetSlot = null) => {
+  const equipItem = useCallback((item: Item, targetSlot: string | null = null) => {
     if (!item) return;
 
-    let slot = targetSlot;
+    let slot: string | null = targetSlot;
 
     // If no specific slot, determine from item type
     if (!slot) {
@@ -62,7 +73,7 @@ export function useEquipment() {
       } else if (itemType === 16) { // ACCESSORY/GEM
         slot = EQUIPMENT_SLOTS.GEM;
       } else {
-        slot = ITEM_TYPE_TO_SLOT[itemType];
+        slot = ITEM_TYPE_TO_SLOT[itemType] ?? null;
       }
     }
 
@@ -74,7 +85,7 @@ export function useEquipment() {
     }
   }, [equippedItems]);
 
-  const unequipSlot = useCallback((slot) => {
+  const unequipSlot = useCallback((slot: string) => {
     setEquippedItems(prev => {
       const newEquipped = { ...prev };
       delete newEquipped[slot];

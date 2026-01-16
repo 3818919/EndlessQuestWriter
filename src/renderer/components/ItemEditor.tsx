@@ -16,7 +16,6 @@ const ITEM_TYPES = {
 export default function ItemEditor({ 
   item, 
   onUpdateItem,
-  gfxCache,
   loadGfx,
   gfxFolder,
   onSetGfxFolder
@@ -71,7 +70,7 @@ export default function ItemEditor({
   };
 
   const handleGFXFolderSelect = async () => {
-    if (!isElectron) {
+    if (!isElectron || !window.electronAPI) {
       alert('Folder selection is only available in the Electron app.');
       return;
     }
