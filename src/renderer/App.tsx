@@ -11,6 +11,10 @@ import { useAppearance } from './hooks/useAppearance';
 import FaceIcon from '@mui/icons-material/Face';
 import CheckroomIcon from '@mui/icons-material/Checkroom';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 // Check if running in Electron
 const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
@@ -25,6 +29,7 @@ const App: React.FC = () => {
   );
   const [isResizing, setIsResizing] = useState(false);
   const [isPanelMinimized, setIsPanelMinimized] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   
   const { 
     eifData, 
@@ -177,7 +182,7 @@ const App: React.FC = () => {
   return (
     <div className="app">
       <div className="main-content">
-        <div className="left-panel">
+        <div className=\"left-panel\">
           <ItemList
             items={eifData.items}
             selectedItemId={selectedItemId}
@@ -192,6 +197,8 @@ const App: React.FC = () => {
             gfxFolder={gfxFolder}
             loadGfx={loadGfx}
             onEquipItem={equipItem}
+            showSettingsModal={showSettingsModal}
+            setShowSettingsModal={setShowSettingsModal}
           />
         </div>
         

@@ -132,8 +132,8 @@ export default function SkinSelector({ gender, hairStyle, hairColor, skinTone, s
             const hairZoom = 3;
             const hairWidth = hairImage.width * hairZoom;
             const hairHeight = hairImage.height * hairZoom;
-            const hairX = (canvas.width - hairWidth) / 2;
-            const hairY = (canvas.height - hairHeight) / 2 + 5;
+            const hairX = (canvas.width - hairWidth) / 2 - 6;
+            const hairY = (canvas.height - hairHeight) / 2 + 7;
             
             ctx.drawImage(
               hairImage,
