@@ -5,11 +5,13 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev",
-    "build": "electron-builder",
-    "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux"
+    "dev": "vite & electron . --dev",
+    "build": "vite build && electron-builder",
+    "build:win": "vite build && electron-builder --win",
+    "build:mac": "vite build && electron-builder --mac",
+    "build:linux": "vite build && electron-builder --linux",
+    "vite": "vite",
+    "vite:build": "vite build"
   },
   "keywords": [
     "endless-online",
@@ -19,20 +21,26 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.2",
     "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "vite": "^7.3.1",
+    "vite-plugin-electron-renderer": "^0.14.6"
   },
   "dependencies": {
-    "electron-store": "^8.1.0"
+    "electron-store": "^8.1.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
   },
   "build": {
     "appId": "com.oaktree.app",
     "productName": "OakTree",
     "directories": {
-      "output": "dist"
+      "output": "build"
     },
     "files": [
       "src/**/*",
+      "dist/**/*",
       "package.json"
     ],
     "win": {

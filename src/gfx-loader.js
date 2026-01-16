@@ -521,3 +521,7 @@ class GFXLoader {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { GFXLoader };
 }
+// Also expose to window for browser usage
+if (typeof window !== 'undefined') {
+  window.GFXLoader = GFXLoader;
+}

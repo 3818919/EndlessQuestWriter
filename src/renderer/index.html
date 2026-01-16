@@ -3,107 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EO Pub Editor</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>OakTree - EO Pub Editor</title>
 </head>
 <body>
-  <div class="app-container">
-    <!-- Header -->
-    <header class="header">
-      <h1>Endless Online Pub Editor</h1>
-      <div class="header-actions">
-        <button id="openFileBtn" class="btn btn-primary">Open EIF File</button>
-        <button id="saveFileBtn" class="btn btn-success" disabled>Save EIF File</button>
-        <button id="openGFXBtn" class="btn btn-secondary">Set GFX Folder</button>
-      </div>
-    </header>
-
-    <!-- Main Content Area -->
-    <div class="main-content">
-      <!-- Left Panel: Item List -->
-      <aside class="sidebar">
-        <div class="sidebar-header">
-          <h2>Items</h2>
-          <input type="text" id="searchInput" placeholder="Search items..." class="search-input">
-          <button id="addItemBtn" class="btn btn-small btn-success" disabled>+ Add Item</button>
-        </div>
-        <div class="item-list" id="itemList">
-          <div class="empty-state">
-            <p>No file loaded</p>
-            <p class="text-muted">Open an EIF file to get started</p>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Center Panel: Item Editor -->
-      <main class="editor-panel">
-        <div class="editor-header">
-          <h2 id="editorTitle">Item Editor</h2>
-          <div class="editor-actions">
-            <button id="deleteItemBtn" class="btn btn-small btn-danger" disabled>Delete Item</button>
-            <button id="duplicateItemBtn" class="btn btn-small" disabled>Duplicate</button>
-          </div>
-        </div>
-        
-        <div class="editor-content" id="editorContent">
-          <div class="empty-state">
-            <p>Select an item to edit</p>
-          </div>
-        </div>
-      </main>
-
-      <!-- Right Panel: GFX Preview -->
-      <aside class="preview-panel">
-        <div class="preview-header">
-          <h2>GFX Preview</h2>
-          <div class="gfx-info">
-            <span id="gfxFileInfo" class="text-muted">No GFX folder set</span>
-          </div>
-        </div>
-        <div class="preview-toolbar">
-          <div class="preview-mode-toggle">
-            <button id="staticPreviewBtn" class="btn btn-small active">Static</button>
-            <button id="animatedPreviewBtn" class="btn btn-small">Animated</button>
-          </div>
-        </div>
-        <div class="preview-content" id="previewContent">
-          <div class="empty-state">
-            <p>No graphic to display</p>
-          </div>
-        </div>
-        <div class="gfx-selector">
-          <label for="gfxInput">Graphic ID:</label>
-          <input type="number" id="gfxInput" min="0" max="9999" disabled>
-          <button id="browseGFXBtn" class="btn btn-small" disabled>Browse...</button>
-        </div>
-      </aside>
-    </div>
-
-    <!-- Status Bar -->
-    <footer class="status-bar">
-      <span id="statusText">Ready</span>
-      <span id="fileInfo"></span>
-    </footer>
-  </div>
-
-  <!-- GFX Browser Modal -->
-  <div id="gfxBrowserModal" class="modal">
-    <div class="modal-content modal-large">
-      <div class="modal-header">
-        <h2>Browse GFX Graphics</h2>
-        <button class="close-modal">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="gfx-grid" id="gfxGrid">
-          <!-- Graphics will be loaded here -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="../eif-parser.js"></script>
-  <script src="../gfx-loader.js"></script>
-  <script src="../character-animator.js"></script>
-  <script src="app.js"></script>
+  <div id="root"></div>
+  <script src="./eif-parser.js"></script>
+  <script src="./gfx-loader.js"></script>
+  <script src="./character-animator.js"></script>
+  <script type="module" src="./index.jsx"></script>
 </body>
 </html>
+

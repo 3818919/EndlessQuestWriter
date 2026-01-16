@@ -7,13 +7,17 @@ class CharacterAnimator {
     this.currentFrame = 0;
     this.frameTimer = 0;
     this.armorFrame = 0;
-    this.state = 'standing'; // standing, walking, attacking
+    this.state = 'standing'; // standing, walking, attacking, spell, sitting
     this.direction = 'down'; // down, up, left, right
     this.zoomLevel = 1; // Default zoom level (1x, 2x, 3x, 4x)
     this.gender = 1; // 0 = female, 1 = male
+    this.hairStyle = 0; // Hair style number
+    this.hairColor = 0; // Hair color number
+    this.skinTone = 0; // Skin tone (0-6)
     
     // GFX file numbers
     this.GFX_SKIN = 8;
+    this.GFX_HAIR = [9, 10, 11, 12]; // Hair files for different colors
     this.GFX_MALE_ARMOR = 13;
     this.GFX_FEMALE_ARMOR = 14;
     this.GFX_MALE_WEAPONS = 17;
@@ -22,10 +26,13 @@ class CharacterAnimator {
     // Animation timing (in frames)
     this.WALK_FRAME_DELAY = 18;  // Doubled from 9
     this.ATTACK_FRAME_DELAY = 24; // Doubled from 12
+    this.SPELL_FRAME_DELAY = 20;  // Spell casting animation
+    this.SIT_FRAME_DELAY = 30;    // Sitting animation
     
     // Loaded sprites
     this.sprites = {
       skin: null,
+      hair: null,
       armor: null,
       weapon: null,
       back: null
@@ -130,16 +137,19 @@ class CharacterAnimator {
     console.log('Character sprites loaded, state:', this.state);
   }
   
-  async loadSkinSprites(gfxData) {
+  async loadSkinSprites(gfxData, skinTone = 0) {
     const sprites = {};
     
     // Skin sprites in GFX files have resource IDs offset by 100
+    // Each skin tone has its own set of sprites: (skinTone * 40) + baseId + 100
     // GFX 1 = resource 101 = standing (4 directions)
     // GFX 2 = resource 102 = walking (4 directions x 4 frames = 16 frames)
     // GFX 3 = resource 103 = attacking melee (4 directions x 2 frames = 8 frames)
     // GFX 7 = resource 107 = attacking bow (4 directions x 1 frame = 4 frames)
     
-    const standingData = GFXLoader.extractBitmapByID(gfxData, 101);
+    const toneOffset = skinTone * 40;
+    
+    const standingData = GFXLoader.extractBitmapByID(gfxData, 101 + toneOffset);
     if (standingData) {
       sprites.standing = await this.createImageFromData(standingData);
       console.log('Loaded standing sprite');
@@ -147,7 +157,7 @@ class CharacterAnimator {
       console.warn('Failed to load standing sprite (resource 101)');
     }
     
-    const walkingData = GFXLoader.extractBitmapByID(gfxData, 102);
+    const walkingData = GFXLoader.extractBitmapByID(gfxData, 102 + toneOffset);
     if (walkingData) {
       sprites.walking = await this.createImageFromData(walkingData);
       console.log('Loaded walking sprite');
@@ -155,7 +165,7 @@ class CharacterAnimator {
       console.warn('Failed to load walking sprite (resource 102)');
     }
     
-    const attackingData = GFXLoader.extractBitmapByID(gfxData, 103);
+    const attackingData = GFXLoader.extractBitmapByID(gfxData, 103 + toneOffset);
     if (attackingData) {
       sprites.attacking = await this.createImageFromData(attackingData);
       console.log('Loaded attacking sprite');
@@ -163,12 +173,52 @@ class CharacterAnimator {
       console.warn('Failed to load attacking sprite (resource 103)');
     }
     
-    const bowData = GFXLoader.extractBitmapByID(gfxData, 107);
+    const bowData = GFXLoader.extractBitmapByID(gfxData, 107 + toneOffset);
     if (bowData) {
       sprites.bow = await this.createImageFromData(bowData);
       console.log('Loaded bow sprite');
     } else {
       console.warn('Failed to load bow sprite (resource 107)');
+    }
+    
+    return sprites;
+  }
+  
+  async loadHairSprites(gfxData, hairStyle = 0) {
+    const sprites = {};
+    
+    // Hair sprites follow similar pattern to skin/armor
+    // Each hair style has its own set of sprites
+    // Offset calculation: (hairStyle - 1) * 40 + baseId + 100
+    
+    if (hairStyle === 0) {
+      return null; // No hair
+    }
+    
+    const styleOffset = (hairStyle - 1) * 40;
+    
+    const standingData = GFXLoader.extractBitmapByID(gfxData, 101 + styleOffset);
+    if (standingData) {
+      sprites.standing = await this.createImageFromData(standingData);
+      console.log('Loaded hair standing sprite');
+    }
+    
+    const walkingData = GFXLoader.extractBitmapByID(gfxData, 102 + styleOffset);
+    if (walkingData) {
+      sprites.walking = await this.createImageFromData(walkingData);
+      console.log('Loaded hair walking sprite');
+    }
+    
+    const attackingData = GFXLoader.extractBitmapByID(gfxData, 103 + styleOffset);
+    if (attackingData) {
+      sprites.attacking = await this.createImageFromData(attackingData);
+      console.log('Loaded hair attacking sprite');
+    }
+    
+    const bowData = GFXLoader.extractBitmapByID(gfxData, 107 + styleOffset);
+    if (bowData) {
+      sprites.bow = await this.createImageFromData(bowData);
+      console.log('Loaded hair bow sprite');
     }
     
     return sprites;
@@ -626,6 +676,7 @@ class CharacterAnimator {
     }
     this.sprites = {
       skin: null,
+      hair: null,
       armor: null,
       weapon: null,
       back: null
@@ -636,4 +687,8 @@ class CharacterAnimator {
 // Make available globally
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = CharacterAnimator;
+}
+// Also expose to window for browser usage
+if (typeof window !== 'undefined') {
+  window.CharacterAnimator = CharacterAnimator;
 }

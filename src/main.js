@@ -15,10 +15,23 @@ function createWindow() {
     }
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  // Load Vite dev server in development, built files in production
+  const isDev = process.argv.includes('--dev');
+  if (isDev) {
+    // Wait a moment for Vite to be ready, then try common ports
+    setTimeout(() => {
+      mainWindow.loadURL('http://localhost:5174').catch(() => {
+        mainWindow.loadURL('http://localhost:5175').catch(() => {
+          mainWindow.loadURL('http://localhost:5173');
+        });
+      });
+    }, 1000);
+  } else {
+    mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+  }
 
   // Open DevTools in development
-  if (process.argv.includes('--dev')) {
+  if (isDev) {
     mainWindow.webContents.openDevTools();
   }
 }
@@ -55,7 +68,7 @@ ipcMain.handle('dialog:openFile', async (event, filters) => {
   return null;
 });
 
-ipcMain.handle('dialog:openGFXFolder', async () => {
+ipcMain.handle('dialog:openDirectory', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory'],
     title: 'Select GFX Folder'
@@ -126,4 +139,7 @@ ipcMain.handle('file:listGFXFiles', async (event, gfxPath) => {
   } catch (error) {
     return { success: false, error: error.message };
   }
+});
+ipcMain.handle('path:join', async (event, ...paths) => {
+  return path.join(...paths);
 });

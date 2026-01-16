@@ -365,3 +365,10 @@ class EIFParser {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { EIFParser, EIFRecord, NumberEncoder, CRC32 };
 }
+// Also expose to window for browser usage
+if (typeof window !== 'undefined') {
+  window.EIFParser = EIFParser;
+  window.EIFRecord = EIFRecord;
+  window.NumberEncoder = NumberEncoder;
+  window.CRC32 = CRC32;
+}
