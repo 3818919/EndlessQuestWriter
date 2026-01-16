@@ -143,3 +143,12 @@ ipcMain.handle('file:listGFXFiles', async (event, gfxPath) => {
 ipcMain.handle('path:join', async (event, ...paths) => {
   return path.join(...paths);
 });
+
+ipcMain.handle('file:exists', async (event, filePath) => {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch (error) {
+    return false;
+  }
+});

@@ -11,5 +11,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   writeFile: (filePath, data) => ipcRenderer.invoke('file:write', filePath, data),
   readGFX: (gfxPath, gfxNumber) => ipcRenderer.invoke('file:readGFX', gfxPath, gfxNumber),
   listGFXFiles: (gfxPath) => ipcRenderer.invoke('file:listGFXFiles', gfxPath),
-  joinPath: (...paths) => ipcRenderer.invoke('path:join', ...paths)
+  joinPath: (...paths) => ipcRenderer.invoke('path:join', ...paths),
+  fileExists: (filePath) => ipcRenderer.invoke('file:exists', filePath)
 });

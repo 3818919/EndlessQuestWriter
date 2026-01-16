@@ -11,50 +11,49 @@ const SKIN_TONES = [
   { id: 5, name: 'Panda' }
 ];
 
-export default function SkinSelector({ gender, hairStyle, hairColor, skinTone, setSkinTone, gfxFolder }) {
+export default function SkinSelector({ gender, hairStyle, hairColor, skinTone, setSkinTone, gfxFolder, loadGfx }) {
   const [skinPreviews, setSkinPreviews] = useState({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!gfxFolder) return;
+    if (!gfxFolder || !loadGfx) return;
 
     const loadSkinPreviews = async () => {
       setLoading(true);
       const previews = {};
 
       try {
-        // Load skin sprite sheet (GFX 8)
-        const skinData = await loadGFXFile(gfxFolder, 8);
-        if (!skinData) {
-          console.error('Failed to load skin GFX file');
+        // Load skin sprite sheet base image (GFX 8, resource 101 - standing)
+        const skinDataUrl = await loadGfx(8, 101);
+        if (!skinDataUrl) {
+          console.error('Failed to load skin GFX');
           setLoading(false);
           return;
         }
 
-        // Load standing sprite (resource 101)
-        const standingBitmap = GFXLoader.extractBitmapByID(skinData, 101);
-        if (!standingBitmap) {
-          console.error('Failed to extract standing skin sprite');
-          setLoading(false);
-          return;
-        }
-
-        const standingImage = await createImageFromData(standingBitmap);
+        // Load skin image
+        const standingImage = await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = skinDataUrl;
+        });
 
         // Load hair sprite if applicable
         let hairImage = null;
         if (hairStyle > 0) {
           const hairGfxFile = gender === 0 ? 10 : 9; // Female: 10, Male: 9
-          const hairData = await loadGFXFile(gfxFolder, hairGfxFile);
-          if (hairData) {
-            const baseGraphic = (hairStyle - 1) * 40 + hairColor * 4;
-            const directionOffset = 0; // Down/right direction
-            const resourceId = baseGraphic + 2 + (directionOffset * 2) + 100;
-            
-            const hairBitmap = GFXLoader.extractBitmapByID(hairData, resourceId);
-            if (hairBitmap) {
-              hairImage = await createImageFromData(hairBitmap);
-            }
+          const baseGraphic = (hairStyle - 1) * 40 + hairColor * 4;
+          const resourceId = baseGraphic + 2 + 100; // Down direction
+          
+          const hairDataUrl = await loadGfx(hairGfxFile, resourceId);
+          if (hairDataUrl) {
+            hairImage = await new Promise((resolve) => {
+              const img = new Image();
+              img.onload = () => resolve(img);
+              img.onerror = () => resolve(null);
+              img.src = hairDataUrl;
+            });
           }
         }
 
@@ -65,7 +64,7 @@ export default function SkinSelector({ gender, hairStyle, hairColor, skinTone, s
           canvas.height = 80;
           const ctx = canvas.getContext('2d');
 
-          // Draw background
+          // Draw transparent or dark background
           ctx.fillStyle = '#2d2d30';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -94,21 +93,47 @@ export default function SkinSelector({ gender, hairStyle, hairColor, skinTone, s
           const destY = (canvas.height - destHeight) / 2;
 
           ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(
+          
+          // Create temporary canvas for skin to process transparency
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = frameWidth;
+          tempCanvas.height = cropHeight;
+          const tempCtx = tempCanvas.getContext('2d');
+          
+          tempCtx.drawImage(
             standingImage,
             srcX, srcY,
+            frameWidth, cropHeight,
+            0, 0,
+            frameWidth, cropHeight
+          );
+          
+          // Remove black pixels from skin
+          const skinData = tempCtx.getImageData(0, 0, frameWidth, cropHeight);
+          const pixels = skinData.data;
+          for (let i = 0; i < pixels.length; i += 4) {
+            if (pixels[i] === 0 && pixels[i + 1] === 0 && pixels[i + 2] === 0) {
+              pixels[i + 3] = 0;
+            }
+          }
+          tempCtx.putImageData(skinData, 0, 0);
+          
+          // Draw processed skin onto main canvas
+          ctx.drawImage(
+            tempCanvas,
+            0, 0,
             frameWidth, cropHeight,
             destX, destY,
             destWidth, destHeight
           );
 
-          // Draw hair on top if available
+          // Draw hair on top if available (already has transparency from cache)
           if (hairImage) {
             const hairZoom = 3;
             const hairWidth = hairImage.width * hairZoom;
             const hairHeight = hairImage.height * hairZoom;
-            const hairX = (canvas.width - hairWidth) / 2 - 2;
-            const hairY = (canvas.height - hairHeight) / 2 + 7;
+            const hairX = (canvas.width - hairWidth) / 2;
+            const hairY = (canvas.height - hairHeight) / 2 + 5;
             
             ctx.drawImage(
               hairImage,
@@ -129,7 +154,7 @@ export default function SkinSelector({ gender, hairStyle, hairColor, skinTone, s
     };
 
     loadSkinPreviews();
-  }, [gfxFolder, gender, hairStyle, hairColor]);
+  }, [gfxFolder, gender, hairStyle, hairColor, loadGfx]);
 
   if (!gfxFolder) {
     return <div className="skin-selector-placeholder">Set GFX folder to preview skins</div>;

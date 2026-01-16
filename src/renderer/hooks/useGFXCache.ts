@@ -145,7 +145,22 @@ export function useGFXCache(gfxFolder) {
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext('2d');
+        
+        // Draw the image
         ctx.drawImage(img, 0, 0);
+        
+        // Remove black background (make it transparent)
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        for (let i = 0; i < data.length; i += 4) {
+          // Check if pixel is black (RGB all 0)
+          if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 0) {
+            data[i + 3] = 0; // Set alpha to 0 (transparent)
+          }
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
         
         const dataUrl = canvas.toDataURL('image/png');
         URL.revokeObjectURL(blobUrl);

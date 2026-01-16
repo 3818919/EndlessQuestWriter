@@ -26,6 +26,7 @@ export default function AppearanceControls({
   skinTone,
   setSkinTone,
   gfxFolder,
+  loadGfx,
   presets,
   onSavePreset,
   onLoadPreset,
@@ -96,6 +97,7 @@ export default function AppearanceControls({
             hairStyle={hairStyle}
             setHairStyle={setHairStyle}
             gfxFolder={gfxFolder}
+            loadGfx={loadGfx}
           />
         </div>
 
@@ -108,6 +110,7 @@ export default function AppearanceControls({
             skinTone={skinTone}
             setSkinTone={setSkinTone}
             gfxFolder={gfxFolder}
+            loadGfx={loadGfx}
           />
         </div>
       </div>

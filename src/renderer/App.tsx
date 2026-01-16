@@ -8,6 +8,9 @@ import { useEIFData } from './hooks/useEIFData';
 import { useGFXCache } from './hooks/useGFXCache';
 import { useEquipment } from './hooks/useEquipment';
 import { useAppearance } from './hooks/useAppearance';
+import FaceIcon from '@mui/icons-material/Face';
+import CheckroomIcon from '@mui/icons-material/Checkroom';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 
 // Check if running in Electron
 const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
@@ -21,6 +24,7 @@ const App: React.FC = () => {
     parseInt(localStorage.getItem('rightPanelWidth') || '400')
   );
   const [isResizing, setIsResizing] = useState(false);
+  const [isPanelMinimized, setIsPanelMinimized] = useState(false);
   
   const { 
     eifData, 
@@ -36,6 +40,43 @@ const App: React.FC = () => {
   } = useEIFData();
 
   const { loadGfx, saveDirHandle } = useGFXCache(gfxFolder);
+  
+  // Auto-load default files on mount
+  React.useEffect(() => {
+    const autoLoadDefaults = async () => {
+      // Auto-load EIF file if not already loaded
+      if (!currentFile && isElectron && window.electronAPI) {
+        try {
+          const defaultEifPath = 'data/pub/dat001.eif';
+          const exists = await window.electronAPI.fileExists(defaultEifPath);
+          if (exists) {
+            console.log('Auto-loading default EIF file:', defaultEifPath);
+            await loadFile(defaultEifPath);
+          }
+        } catch (error) {
+          console.log('Could not auto-load default EIF file:', error);
+        }
+      }
+      
+      // Auto-select GFX folder if not already set
+      const storedGfxFolder = localStorage.getItem('gfxFolder');
+      if (!storedGfxFolder && isElectron && window.electronAPI) {
+        try {
+          const defaultGfxPath = 'data/gfx';
+          const exists = await window.electronAPI.fileExists(defaultGfxPath);
+          if (exists) {
+            console.log('Auto-selecting default GFX folder:', defaultGfxPath);
+            setGfxFolder(defaultGfxPath);
+            localStorage.setItem('gfxFolder', defaultGfxPath);
+          }
+        } catch (error) {
+          console.log('Could not auto-select default GFX folder:', error);
+        }
+      }
+    };
+    
+    autoLoadDefaults();
+  }, [currentFile, loadFile]); // Run when currentFile changes or on mount
   
   const selectGfxFolder = async () => {
     try {
@@ -167,31 +208,10 @@ const App: React.FC = () => {
         </div>
         
         <div 
-          className={`right-panel ${isResizing ? 'resizing' : ''}`}
-          style={{ width: `${rightPanelWidth}px` }}
+          className={`right-panel ${isResizing ? 'resizing' : ''} ${isPanelMinimized ? 'minimized' : ''}`}
+          style={{ width: isPanelMinimized ? '60px' : `${rightPanelWidth}px` }}
         >
           <div className="resize-handle" onMouseDown={handleMouseDown} />
-          
-          <div className="right-panel-tabs">
-            <button
-              className={`tab ${activeTab === 'appearance' ? 'active' : ''}`}
-              onClick={() => setActiveTab('appearance')}
-            >
-              Appearance
-            </button>
-            <button
-              className={`tab ${activeTab === 'equipment' ? 'active' : ''}`}
-              onClick={() => setActiveTab('equipment')}
-            >
-              Equipment
-            </button>
-            <button
-              className={`tab ${activeTab === 'preview' ? 'active' : ''}`}
-              onClick={() => setActiveTab('preview')}
-            >
-              Character Preview
-            </button>
-          </div>
           
           <div className="right-panel-content">
             {activeTab === 'appearance' && (
@@ -205,6 +225,7 @@ const App: React.FC = () => {
                 skinTone={skinTone}
                 setSkinTone={setSkinTone}
                 gfxFolder={gfxFolder}
+                loadGfx={loadGfx}
                 presets={presets}
                 onSavePreset={savePreset}
                 onLoadPreset={loadPreset}
@@ -237,6 +258,54 @@ const App: React.FC = () => {
                 items={eifData.items}
               />
             )}
+          </div>
+          
+          <div className="vertical-sidebar">
+            <button
+              className={`sidebar-button ${activeTab === 'appearance' ? 'active' : ''}`}
+              onClick={() => {
+                if (activeTab === 'appearance' && !isPanelMinimized) {
+                  setIsPanelMinimized(true);
+                } else {
+                  setActiveTab('appearance');
+                  setIsPanelMinimized(false);
+                }
+              }}
+              title="Appearance"
+            >
+              <FaceIcon />
+              <span className="sidebar-label">Appearance</span>
+            </button>
+            <button
+              className={`sidebar-button ${activeTab === 'equipment' ? 'active' : ''}`}
+              onClick={() => {
+                if (activeTab === 'equipment' && !isPanelMinimized) {
+                  setIsPanelMinimized(true);
+                } else {
+                  setActiveTab('equipment');
+                  setIsPanelMinimized(false);
+                }
+              }}
+              title="Equipment"
+            >
+              <CheckroomIcon />
+              <span className="sidebar-label">Equipment</span>
+            </button>
+            <button
+              className={`sidebar-button ${activeTab === 'preview' ? 'active' : ''}`}
+              onClick={() => {
+                if (activeTab === 'preview' && !isPanelMinimized) {
+                  setIsPanelMinimized(true);
+                } else {
+                  setActiveTab('preview');
+                  setIsPanelMinimized(false);
+                }
+              }}
+              title="Preview"
+            >
+              <VisibilityIcon />
+              <span className="sidebar-label">Preview</span>
+            </button>
           </div>
         </div>
       </div>
