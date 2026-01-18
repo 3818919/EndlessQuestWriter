@@ -6,6 +6,7 @@ interface SaveProjectOptions {
   eifData: any;
   enfData: any;
   ecfData: any;
+  esfData: any;
   dropsData: Map<number, any[]>;
   equippedItems: Record<string, any>;
   appearance: {
@@ -20,6 +21,7 @@ interface ProjectData {
   items?: Record<number, any>;
   npcs?: Record<number, any>;
   classes?: Record<number, any>;
+  skills?: Record<number, any>;
   drops?: Map<number, any[]>;
   equipment?: {
     equippedItems: Record<string, any>;
@@ -46,6 +48,7 @@ export class ProjectService {
       eifData,
       enfData,
       ecfData,
+      esfData,
       dropsData,
       equippedItems,
       appearance
@@ -95,6 +98,15 @@ export class ProjectService {
     }
     console.log('classes.json saved successfully');
 
+    // Save skills.json
+    const skillsArray = recordToArray(esfData.skills);
+    const skillsPath = `${projectFolder}/skills.json`;
+    result = await window.electronAPI.writeTextFile(skillsPath, JSON.stringify(skillsArray, null, 2));
+    if (!result.success) {
+      throw new Error(`Failed to save skills.json: ${result.error}`);
+    }
+    console.log('skills.json saved successfully');
+
     // Save drops.json
     const dropsArray = Array.from(dropsData.entries()).map(([npcId, drops]) => ({ npcId, drops }));
     const dropsPath = `${projectFolder}/drops.json`;
@@ -126,6 +138,7 @@ export class ProjectService {
       setEifData: (data: any) => void;
       setEnfData: (data: any) => void;
       setEcfData: (data: any) => void;
+      setEsfData: (data: any) => void;
       setDropsData: (data: Map<number, any[]>) => void;
       restoreEquipment: (equipment: Record<string, any>) => void;
       setGender: (gender: number) => void;
@@ -138,6 +151,7 @@ export class ProjectService {
       setEifData,
       setEnfData,
       setEcfData,
+      setEsfData,
       setDropsData,
       restoreEquipment,
       setGender,
@@ -156,6 +170,10 @@ export class ProjectService {
     
     if (projectData.classes) {
       setEcfData({ version: 1, classes: projectData.classes });
+    }
+    
+    if (projectData.skills) {
+      setEsfData({ version: 1, skills: projectData.skills });
     }
     
     if (projectData.drops) {

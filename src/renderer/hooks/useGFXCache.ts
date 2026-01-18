@@ -83,21 +83,27 @@ export function useGFXCache(gfxFolder) {
 
   const loadGfx = useCallback(async (gfxNumber, resourceId) => {
     if (!gfxFolder) {
-      console.warn('GFX folder not set');
+      console.warn('[useGFXCache] GFX folder not set');
       return null;
     }
 
+    console.log(`[useGFXCache] Request: GFX ${gfxNumber}, resourceId ${resourceId}`);
+    
     const cacheKey = `${gfxNumber}_${resourceId}`;
     
     // Return cached bitmap if available
     if (bitmapCache.current[cacheKey]) {
+      console.log(`[useGFXCache] Cache HIT: ${cacheKey}`);
       return bitmapCache.current[cacheKey];
     }
 
     // If already loading, return the existing promise
     if (loadingPromises.current[cacheKey]) {
+      console.log(`[useGFXCache] Already loading: ${cacheKey}`);
       return loadingPromises.current[cacheKey];
     }
+
+    console.log(`[useGFXCache] Cache MISS: ${cacheKey}, initiating load...`);
 
     // Queue this load to ensure only 1 image decodes at a time globally
     // This prevents browser main thread blocking from concurrent BMP decoding
@@ -113,11 +119,19 @@ export function useGFXCache(gfxFolder) {
           const result = await window.electronAPI.readGFX(gfxFolder, gfxNumber);
           
           if (!result.success) {
-            console.error(`Failed to load GFX ${gfxNumber}:`, result.error);
+            console.error(`[useGFXCache] Failed to load GFX ${gfxNumber}:`, result.error);
             return null;
           }
           
           gfxData = new Uint8Array(result.data);
+          console.log(`[useGFXCache] Loaded GFX ${gfxNumber}, size: ${gfxData.length} bytes`);
+          
+          // List all resources in GFX 024 (Spells) for debugging
+          if (gfxNumber === 24) {
+            const allResources = GFXLoader.listAllBitmapResources(gfxData);
+            console.log(`[useGFXCache] GFX 024 contains ${allResources.length} bitmap resources:`);
+            console.log(`[useGFXCache] Resource IDs: ${allResources.join(', ')}`);
+          }
         } else {
           // Browser: Use File System Access API
           if (!dirHandleRef.current) {

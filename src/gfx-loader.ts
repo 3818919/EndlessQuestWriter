@@ -85,9 +85,11 @@ class GFXLoader {
    */
   static extractBitmapByID(gfxFileData, resourceId) {
     try {
+      console.log(`[GFXLoader] Extracting bitmap with resourceId: ${resourceId}`);
+      
       const header = this.parsePEHeader(gfxFileData);
       if (!header) {
-        console.warn('No resource section found in GFX file');
+        console.warn('[GFXLoader] No resource section found in GFX file');
         return null;
       }
 
@@ -98,19 +100,52 @@ class GFXLoader {
         resourceOffset,
         header.virtualAddress,
         resourceId,
-        header
+        header,
+        false // listAll = false
       );
 
+      console.log(`[GFXLoader] Found ${bitmapResources.length} bitmap resources for ID ${resourceId}`);
+
       if (bitmapResources.length === 0) {
+        console.warn(`[GFXLoader] No bitmap resources found for ID ${resourceId}`);
         return null;
       }
 
       // Get the first matching resource
       const resource = bitmapResources[0];
+      console.log(`[GFXLoader] Extracting bitmap at offset ${resource.dataOffset}, size ${resource.dataSize}`);
       return this.convertDIBToBMP(gfxFileData, resource.dataOffset, resource.dataSize);
     } catch (error) {
-      console.error('Error extracting bitmap:', error);
+      console.error('[GFXLoader] Error extracting bitmap:', error);
       return null;
+    }
+  }
+
+  /**
+   * List all bitmap resource IDs in a GFX file
+   */
+  static listAllBitmapResources(gfxFileData) {
+    try {
+      const header = this.parsePEHeader(gfxFileData);
+      if (!header) {
+        console.warn('[GFXLoader] No resource section found in GFX file');
+        return [];
+      }
+
+      const resourceOffset = header.pointerToRawData;
+      const bitmapResources = this.findBitmapResources(
+        gfxFileData,
+        resourceOffset,
+        header.virtualAddress,
+        null, // targetId = null when listing all
+        header,
+        true // listAll = true
+      );
+
+      return bitmapResources.map(r => r.id).sort((a, b) => a - b);
+    } catch (error) {
+      console.error('[GFXLoader] Error listing bitmap resources:', error);
+      return [];
     }
   }
 
@@ -118,7 +153,7 @@ class GFXLoader {
    * Find bitmap resources in PE file
    * Bitmap resources have type ID 2 (RT_BITMAP)
    */
-  static findBitmapResources(data, baseOffset, virtualAddress, targetId, header) {
+  static findBitmapResources(data, baseOffset, virtualAddress, targetId, header, listAll = false) {
     const view = new DataView(data.buffer, data.byteOffset);
     const resources = [];
 
@@ -149,8 +184,8 @@ class GFXLoader {
             const offsetToLangDir = view.getUint32(idEntryOffset + 4, true);
             idEntryOffset += 8;
 
-            if (resourceId === targetId && (offsetToLangDir & 0x80000000)) {
-              // Found our target ID, parse language directory
+            if ((listAll || resourceId === targetId) && (offsetToLangDir & 0x80000000)) {
+              // Found our target ID (or listing all), parse language directory
               const langDir = baseOffset + (offsetToLangDir & 0x7FFFFFFF);
               const numLangIds = view.getUint16(langDir + 14, true);
               

@@ -16,7 +16,7 @@ interface ProjectConfig {
 
 interface LandingScreenProps {
   onSelectProject: (projectName: string) => void;
-  onCreateProject: (projectName: string, gfxPath: string, eifPath?: string, enfPath?: string, ecfPath?: string, dropsPath?: string) => void;
+  onCreateProject: (projectName: string, gfxPath: string, eifPath?: string, enfPath?: string, ecfPath?: string, esfPath?: string, dropsPath?: string) => void;
   onDeleteProject?: (projectName: string) => void;
   dataDirectoryPath: string | null;
 }
@@ -34,6 +34,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
   const [newProjectEifPath, setNewProjectEifPath] = useState('');
   const [newProjectEnfPath, setNewProjectEnfPath] = useState('');
   const [newProjectEcfPath, setNewProjectEcfPath] = useState('');
+  const [newProjectEsfPath, setNewProjectEsfPath] = useState('');
   const [newProjectDropsPath, setNewProjectDropsPath] = useState('');
 
   // Load projects when component mounts
@@ -94,6 +95,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
       newProjectEifPath.trim(),
       newProjectEnfPath.trim(),
       newProjectEcfPath.trim(),
+      newProjectEsfPath.trim(),
       newProjectDropsPath.trim()
     );
     setShowCreateProject(false);
@@ -102,6 +104,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
     setNewProjectEifPath('');
     setNewProjectEnfPath('');
     setNewProjectEcfPath('');
+    setNewProjectEsfPath('');
     setNewProjectDropsPath('');
     loadProjects();
   };
@@ -145,6 +148,17 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
     ]);
     if (file) {
       setNewProjectEcfPath(file);
+    }
+  };
+
+  const handleSelectEsfPath = async () => {
+    if (!window.electronAPI) return;
+    
+    const file = await window.electronAPI.openFile([
+      { name: 'ESF Files', extensions: ['esf'] }
+    ]);
+    if (file) {
+      setNewProjectEsfPath(file);
     }
   };
 
@@ -323,6 +337,25 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                 />
                 {isElectron && (
                   <button onClick={handleSelectEcfPath} className="btn btn-secondary">
+                    Browse
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Skills File (ESF) - Optional</label>
+              <div className="input-with-button">
+                <input
+                  type="text"
+                  value={newProjectEsfPath}
+                  onChange={(e) => setNewProjectEsfPath(e.target.value)}
+                  placeholder="/path/to/skills.esf"
+                  className="form-control"
+                  readOnly={isElectron}
+                />
+                {isElectron && (
+                  <button onClick={handleSelectEsfPath} className="btn btn-secondary">
                     Browse
                   </button>
                 )}

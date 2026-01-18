@@ -74,8 +74,6 @@ class ECFParser {
       // Sort records by ID to ensure correct ordering
       const sortedRecords = [...recordsArray].sort((a, b) => (a.id || 0) - (b.id || 0));
       
-      console.log('First class record to serialize:', sortedRecords[0]);
-      
       // Convert records back to EcfRecord format
       ecf.classes = sortedRecords.map(record => {
         const ecfRecord = new EcfRecord();

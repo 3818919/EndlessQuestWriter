@@ -2,9 +2,12 @@ import React, { useState, useCallback, useEffect } from 'react';
 import ItemList from '../components/items/ItemList';
 import NpcList from '../components/npcs/NpcList';
 import ClassList from '../components/classes/ClassList';
+import SkillList from '../components/skills/SkillList';
 import ItemEditor from '../components/items/ItemEditor';
 import NpcEditor from '../components/npcs/NpcEditor';
 import ClassEditor from '../components/classes/ClassEditor';
+import SkillEditor from '../components/skills/SkillEditor';
+import SkillPreview from '../components/skills/SkillPreview';
 import DropsEditor from '../components/npcs/DropsEditor';
 import ItemDroppedBy from '../components/items/ItemDroppedBy';
 import CharacterPreview from '../components/items/CharacterPreview';
@@ -24,10 +27,11 @@ interface EditorPageProps {
   eifData: any;
   enfData: any;
   ecfData: any;
+  esfData: any;
   dropsData: Map<number, any[]>;
   pubDirectory: string | null;
-  activeTab: 'items' | 'npcs' | 'classes';
-  setActiveTab: (tab: 'items' | 'npcs' | 'classes') => void;
+  activeTab: 'items' | 'npcs' | 'classes' | 'skills';
+  setActiveTab: (tab: 'items' | 'npcs' | 'classes' | 'skills') => void;
   
   // Items operations
   addItem: () => void;
@@ -46,6 +50,12 @@ interface EditorPageProps {
   deleteClass: (id: number) => void;
   duplicateClass: (id: number) => void;
   updateClass: (id: number, updates: any) => void;
+  
+  // Skills operations
+  addSkill: () => void;
+  deleteSkill: (id: number) => void;
+  duplicateSkill: (id: number) => void;
+  updateSkill: (id: number, updates: any) => void;
   
   // Drops operations
   updateNpcDrops: (npcId: number, drops: any[]) => void;
@@ -87,10 +97,12 @@ interface EditorPageProps {
   importNpcs: () => Promise<void>;
   importDrops: () => Promise<void>;
   importClasses: () => Promise<void>;
+  importSkills: () => Promise<void>;
   exportItems: () => Promise<void>;
   exportNpcs: () => Promise<void>;
   exportDrops: () => Promise<void>;
   exportClasses: () => Promise<void>;
+  exportSkills: () => Promise<void>;
   
   // Legacy stubs
   loadDirectory: () => void;
@@ -100,6 +112,7 @@ const EditorPage: React.FC<EditorPageProps> = ({
   eifData,
   enfData,
   ecfData,
+  esfData,
   dropsData,
   pubDirectory,
   activeTab,
@@ -116,6 +129,10 @@ const EditorPage: React.FC<EditorPageProps> = ({
   deleteClass,
   duplicateClass,
   updateClass,
+  addSkill,
+  deleteSkill,
+  duplicateSkill,
+  updateSkill,
   updateNpcDrops,
   saveDropsFile,
   equippedItems,
@@ -147,10 +164,12 @@ const EditorPage: React.FC<EditorPageProps> = ({
   importNpcs,
   importDrops,
   importClasses,
+  importSkills,
   exportItems,
   exportNpcs,
   exportDrops,
   exportClasses,
+  exportSkills,
   loadDirectory
 }) => {
   // UI state - lives in EditorPage since it's editor-specific
@@ -162,6 +181,7 @@ const EditorPage: React.FC<EditorPageProps> = ({
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [selectedNpcId, setSelectedNpcId] = useState<number | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  const [selectedSkillId, setSelectedSkillId] = useState<number | null>(null);
 
   // Select first NPC when switching to NPCs tab
   useEffect(() => {
@@ -187,6 +207,7 @@ const EditorPage: React.FC<EditorPageProps> = ({
   const selectedItem = selectedItemId !== null ? eifData.items[selectedItemId] : null;
   const selectedNpc = selectedNpcId !== null ? enfData.npcs[selectedNpcId] : null;
   const selectedClass = selectedClassId !== null ? ecfData.classes[selectedClassId] : null;
+  const selectedSkill = selectedSkillId !== null ? esfData.skills[selectedSkillId] : null;
 
   // Wrapper for equipItem to match PaperdollSlots signature
   const handleEquipItemFromId = useCallback((itemId: number, slotKey: string) => {
@@ -205,16 +226,18 @@ const EditorPage: React.FC<EditorPageProps> = ({
     <div className="app">
       <VerticalSidebar
         activeTab={activeTab}
-        onTabChange={(tab: string) => setActiveTab(tab as 'items' | 'npcs' | 'classes')}
+        onTabChange={(tab: string) => setActiveTab(tab as 'items' | 'npcs' | 'classes' | 'skills')}
         onSave={saveAllFiles}
         onImportItems={importItems}
         onImportNpcs={importNpcs}
         onImportDrops={importDrops}
         onImportClasses={importClasses}
+        onImportSkills={importSkills}
         onExportNpcs={exportNpcs}
         onExportItems={exportItems}
         onExportDrops={exportDrops}
         onExportClasses={exportClasses}
+        onExportSkills={exportSkills}
         onSettings={() => setShowSettingsModal(true)}
         onReturnToProjects={returnToProjects}
         isSaveDisabled={!pubDirectory}
@@ -295,6 +318,27 @@ const EditorPage: React.FC<EditorPageProps> = ({
               leftPanelMinimized={leftPanelMinimized}
             />
           </div>
+          
+          <div style={{ 
+            display: activeTab === 'skills' ? 'flex' : 'none', 
+            flex: 1,
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
+            <SkillList
+              skills={esfData.skills}
+              selectedSkillId={selectedSkillId}
+              onSelectSkill={setSelectedSkillId}
+              onAddSkill={addSkill}
+              onDeleteSkill={deleteSkill}
+              onDuplicateSkill={duplicateSkill}
+              showSettingsModal={showSettingsModal}
+              setShowSettingsModal={setShowSettingsModal}
+              leftPanelMinimized={leftPanelMinimized}
+              loadGfx={loadGfx}
+              gfxFolder={gfxFolder}
+            />
+          </div>
         </div>
         
         <div className="center-panel">
@@ -326,6 +370,15 @@ const EditorPage: React.FC<EditorPageProps> = ({
               onUpdateClass={updateClass}
               onDuplicateClass={duplicateClass}
               onDeleteClass={deleteClass}
+            />
+          )}
+          
+          {activeTab === 'skills' && selectedSkill && (
+            <SkillEditor
+              skill={selectedSkill}
+              onUpdateSkill={updateSkill}
+              onDuplicateSkill={duplicateSkill}
+              onDeleteSkill={deleteSkill}
             />
           )}
         </div>
@@ -429,6 +482,16 @@ const EditorPage: React.FC<EditorPageProps> = ({
             <div className="right-panel-bottom">
               <NpcPreview
                 npc={selectedNpc}
+                loadGfx={loadGfx}
+                gfxFolder={gfxFolder}
+              />
+            </div>
+            )}
+            
+            {showPreview && activeTab === 'skills' && selectedSkill && (
+            <div className="right-panel-bottom">
+              <SkillPreview
+                skill={selectedSkill}
                 loadGfx={loadGfx}
                 gfxFolder={gfxFolder}
               />

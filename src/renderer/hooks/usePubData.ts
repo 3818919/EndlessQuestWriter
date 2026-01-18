@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { EIFParser } from '../../eif-parser';
 import { ENFParser } from '../../enf-parser';
 import { ECFParser } from '../../ecf-parser';
+import { ESFParser } from '../../esf-parser';
 
 // Check if running in Electron
 const isElectron = typeof window !== 'undefined' && window.electronAPI;
@@ -10,13 +11,15 @@ export function usePubData(onChangeCallback?: () => void) {
   const [eifData, setEifData] = useState({ version: 1, items: {} });
   const [enfData, setEnfData] = useState({ version: 1, npcs: {} });
   const [ecfData, setEcfData] = useState({ version: 1, classes: {} });
+  const [esfData, setEsfData] = useState({ version: 1, skills: {} });
   const [pubDirectory, setPubDirectory] = useState(
     localStorage.getItem('lastPubDirectory') || null
   );
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [selectedNpcId, setSelectedNpcId] = useState(null);
   const [selectedClassId, setSelectedClassId] = useState(null);
-  const [activeTab, setActiveTab] = useState<'items' | 'npcs' | 'classes'>('items');
+  const [selectedSkillId, setSelectedSkillId] = useState(null);
+  const [activeTab, setActiveTab] = useState<'items' | 'npcs' | 'classes' | 'skills'>('items');
   const [isInitialized, setIsInitialized] = useState(false);
 
   const loadDirectory = useCallback(async () => {
@@ -557,18 +560,106 @@ export function usePubData(onChangeCallback?: () => void) {
     }
   }, [onChangeCallback]);
 
+  // Skills (ESF) operations
+  const addSkill = useCallback(() => {
+    const newId = Math.max(0, ...Object.keys(esfData.skills).map(Number)) + 1;
+    const newSkill = {
+      id: newId,
+      name: `New Skill ${newId}`,
+      chant: '',
+      iconId: 0,
+      graphicId: 0,
+      tpCost: 0,
+      spCost: 0,
+      castTime: 0,
+      nature: 0,
+      type: 0,
+      element: 0,
+      elementPower: 0,
+      targetRestrict: 0,
+      targetType: 0,
+      targetTime: 0,
+      maxSkillLevel: 1,
+      minDamage: 0,
+      maxDamage: 0,
+      accuracy: 0,
+      evade: 0,
+      armor: 0,
+      returnDamage: 0,
+      hpHeal: 0,
+      tpHeal: 0,
+      spHeal: 0,
+      str: 0,
+      intl: 0,
+      wis: 0,
+      agi: 0,
+      con: 0,
+      cha: 0
+    };
+    setEsfData(prev => ({
+      ...prev,
+      skills: { ...prev.skills, [newId]: newSkill }
+    }));
+    setSelectedSkillId(newId);
+  }, [esfData]);
+
+  const deleteSkill = useCallback((skillId) => {
+    if (!confirm(`Delete skill ${skillId}?`)) return;
+
+    setEsfData(prev => {
+      const newSkills = { ...prev.skills };
+      delete newSkills[skillId];
+      return { ...prev, skills: newSkills };
+    });
+
+    if (selectedSkillId === skillId) {
+      const remainingIds = Object.keys(esfData.skills).filter(id => parseInt(id) !== skillId);
+      setSelectedSkillId(remainingIds.length > 0 ? parseInt(remainingIds[0]) : null);
+    }
+  }, [esfData, selectedSkillId]);
+
+  const duplicateSkill = useCallback((skillId) => {
+    const skill = esfData.skills[skillId];
+    if (!skill) return;
+
+    const newId = Math.max(0, ...Object.keys(esfData.skills).map(Number)) + 1;
+    const newSkill = { ...skill, id: newId, name: `${skill.name} (Copy)` };
+
+    setEsfData(prev => ({
+      ...prev,
+      skills: { ...prev.skills, [newId]: newSkill }
+    }));
+    setSelectedSkillId(newId);
+  }, [esfData]);
+
+  const updateSkill = useCallback((skillId, updates) => {
+    setEsfData(prev => ({
+      ...prev,
+      skills: {
+        ...prev.skills,
+        [skillId]: { ...prev.skills[skillId], ...updates }
+      }
+    }));
+    if (onChangeCallback) {
+      onChangeCallback();
+    }
+  }, [onChangeCallback]);
+
   return {
     eifData,
     enfData,
     ecfData,
+    esfData,
     pubDirectory,
     selectedItemId,
     selectedNpcId,
     selectedClassId,
+    selectedSkillId,
     activeTab,
     setSelectedItemId,
     setSelectedNpcId,
     setSelectedClassId,
+    setSelectedSkillId,
     setActiveTab,
     loadDirectory,
     loadDirectoryFromPath,
@@ -585,9 +676,14 @@ export function usePubData(onChangeCallback?: () => void) {
     deleteClass,
     duplicateClass,
     updateClass,
+    addSkill,
+    deleteSkill,
+    duplicateSkill,
+    updateSkill,
     setEifData,
     setEnfData,
     setEcfData,
+    setEsfData,
     setPubDirectory
   };
 }

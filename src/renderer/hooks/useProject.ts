@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { EIFParser } from '../../eif-parser';
 import { ENFParser } from '../../enf-parser';
 import { ECFParser } from '../../ecf-parser';
+import { ESFParser } from '../../esf-parser';
 import { recordToArray, arrayToRecord } from '../../utils/dataTransforms';
 
 interface ProjectConfig {
@@ -14,6 +15,8 @@ interface ProjectConfig {
 interface ProjectData {
   items?: Record<number, any>;
   npcs?: Record<number, any>;
+  classes?: Record<number, any>;
+  skills?: Record<number, any>;
   drops?: Map<number, any[]>;
   equipment?: {
     equippedItems: Record<string, any>;
@@ -30,7 +33,7 @@ interface UseProjectReturn {
   currentProject: string;
   dataFolder: string;
   gfxFolder: string;
-  createProject: (projectName: string, gfxPath: string, eifPath?: string, enfPath?: string, dropsPath?: string) => Promise<void>;
+  createProject: (projectName: string, gfxPath: string, eifPath?: string, enfPath?: string, ecfPath?: string, esfPath?: string, dropsPath?: string) => Promise<void>;
   selectProject: (projectName: string) => Promise<ProjectData | null>;
   deleteProject: (projectName: string) => Promise<void>;
   setCurrentProject: (projectName: string) => void;
@@ -63,6 +66,7 @@ export const useProject = (): UseProjectReturn => {
     eifPath?: string,
     enfPath?: string,
     ecfPath?: string,
+    esfPath?: string,
     dropsPath?: string
   ) => {
     if (!dataFolder || !isElectron || !window.electronAPI) {
@@ -180,6 +184,35 @@ export const useProject = (): UseProjectReturn => {
         importedFiles.push('Classes');
       } else {
         console.error('Failed to read ECF file:', fileData.error);
+      }
+    }
+
+    // Import ESF if provided
+    if (esfPath) {
+      console.log('Importing ESF from:', esfPath);
+      const fileData = await window.electronAPI.readFile(esfPath);
+      if (fileData.success) {
+        const esfArray = new Uint8Array(fileData.data);
+        console.log('ESF file read successfully, size:', esfArray.byteLength);
+        const parsedData = ESFParser.parse(esfArray.buffer);
+        console.log('Parsed ESF data:', parsedData);
+        console.log('Number of records:', parsedData.records?.length);
+        
+        const skills: Record<number, any> = {};
+        for (const skillRecord of parsedData.records) {
+          skills[skillRecord.id] = skillRecord;
+        }
+        console.log('Skills object created, keys:', Object.keys(skills).length);
+        
+        const skillsArray = recordToArray(skills);
+        console.log('Skills array created, length:', skillsArray.length);
+        const skillsPath = `${projectFolder}/skills.json`;
+        const writeResult = await window.electronAPI.writeTextFile(skillsPath, JSON.stringify(skillsArray, null, 2));
+        console.log('Skills write result:', writeResult);
+        console.log('Skills imported during project creation');
+        importedFiles.push('Skills');
+      } else {
+        console.error('Failed to read ESF file:', fileData.error);
       }
     }
 
@@ -312,6 +345,24 @@ export const useProject = (): UseProjectReturn => {
       } else {
         projectData.classes = {};
         console.log('classes.json not found, initialized as empty');
+      }
+      
+      // Load skills.json
+      const skillsPath = `${projectFolder}/skills.json`;
+      result = await window.electronAPI.readTextFile(skillsPath);
+      if (result.success) {
+        const skillsData = JSON.parse(result.data);
+        if (Array.isArray(skillsData)) {
+          projectData.skills = arrayToRecord(skillsData);
+          console.log('skills.json loaded successfully');
+        } else {
+          projectData.skills = {};
+          console.log('skills.json is not an array, initialized as empty');
+        }
+        jsonFilesFound = true;
+      } else {
+        projectData.skills = {};
+        console.log('skills.json not found, initialized as empty');
       }
       
       // Load drops.json

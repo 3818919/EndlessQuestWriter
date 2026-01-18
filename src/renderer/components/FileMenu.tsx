@@ -7,10 +7,12 @@ interface FileMenuProps {
   onImportNpcs: () => void;
   onImportDrops: () => void;
   onImportClasses: () => void;
+  onImportSkills: () => void;
   onExportNpcs: () => void;
   onExportItems: () => void;
   onExportDrops: () => void;
   onExportClasses: () => void;
+  onExportSkills: () => void;
   disabled?: boolean;
 }
 
@@ -20,10 +22,12 @@ const FileMenu: React.FC<FileMenuProps> = ({
   onImportNpcs,
   onImportDrops,
   onImportClasses,
+  onImportSkills,
   onExportNpcs, 
   onExportItems, 
   onExportDrops,
-  onExportClasses, 
+  onExportClasses,
+  onExportSkills, 
   disabled 
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -48,6 +52,11 @@ const FileMenu: React.FC<FileMenuProps> = ({
     onImportClasses();
   };
 
+  const handleImportSkills = () => {
+    setIsOpen(false);
+    onImportSkills();
+  };
+
   const handleExportNpcs = () => {
     setIsOpen(false);
     onExportNpcs();
@@ -66,6 +75,11 @@ const FileMenu: React.FC<FileMenuProps> = ({
   const handleExportClasses = () => {
     setIsOpen(false);
     onExportClasses();
+  };
+
+  const handleExportSkills = () => {
+    setIsOpen(false);
+    onExportSkills();
   };
 
   const handleSave = () => {
@@ -104,6 +118,9 @@ const FileMenu: React.FC<FileMenuProps> = ({
               <button className="file-menu-item" onClick={handleImportClasses}>
                 <span>Classes (.ecf)</span>
               </button>
+              <button className="file-menu-item" onClick={handleImportSkills}>
+                <span>Skills (.esf)</span>
+              </button>
               <button className="file-menu-item" onClick={handleImportDrops}>
                 <span>Drops (.txt)</span>
               </button>
@@ -118,6 +135,9 @@ const FileMenu: React.FC<FileMenuProps> = ({
               </button>
               <button className="file-menu-item" onClick={handleExportClasses}>
                 <span>Classes (.ecf)</span>
+              </button>
+              <button className="file-menu-item" onClick={handleExportSkills}>
+                <span>Skills (.esf)</span>
               </button>
               <button className="file-menu-item" onClick={handleExportDrops}>
                 <span>Drops (.txt)</span>

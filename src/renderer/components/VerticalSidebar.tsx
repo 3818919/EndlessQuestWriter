@@ -3,7 +3,7 @@ import ListAltIcon from '@mui/icons-material/ListAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HomeIcon from '@mui/icons-material/Home';
 import FileMenu from './FileMenu';
-import { CrossedSwordsIcon, SkullCrossedBonesIcon } from './icons';
+import { CrossedSwordsIcon, SkullCrossedBonesIcon, SpellBookIcon } from './icons';
 
 interface VerticalSidebarProps {
   activeTab: string;
@@ -13,10 +13,12 @@ interface VerticalSidebarProps {
   onImportNpcs: () => void;
   onImportDrops: () => void;
   onImportClasses: () => void;
+  onImportSkills: () => void;
   onExportNpcs: () => void;
   onExportItems: () => void;
   onExportDrops: () => void;
   onExportClasses: () => void;
+  onExportSkills: () => void;
   onSettings: () => void;
   onReturnToProjects: () => void;
   isSaveDisabled: boolean;
@@ -32,10 +34,12 @@ const VerticalSidebar: React.FC<VerticalSidebarProps> = ({
   onImportNpcs,
   onImportDrops,
   onImportClasses,
+  onImportSkills,
   onExportNpcs,
   onExportItems,
   onExportDrops,
   onExportClasses,
+  onExportSkills,
   onSettings,
   onReturnToProjects,
   isSaveDisabled,
@@ -62,12 +66,12 @@ const VerticalSidebar: React.FC<VerticalSidebarProps> = ({
         onSave={onSave}
         onImportItems={onImportItems}
         onImportNpcs={onImportNpcs}
-        onImportDrops={onImportDrops}
-        onImportClasses={onImportClasses}
+        onImportSkills={onImportSkills}
         onExportNpcs={onExportNpcs}
         onExportItems={onExportItems}
         onExportDrops={onExportDrops}
         onExportClasses={onExportClasses}
+        onExportSkills={onExportSkills}
         disabled={isSaveDisabled}
       />
       <button
@@ -90,6 +94,13 @@ const VerticalSidebar: React.FC<VerticalSidebarProps> = ({
         title="Classes"
       >
         <CrossedSwordsIcon />
+      </button>
+      <button
+        className={`left-sidebar-button ${activeTab === 'skills' && !leftPanelMinimized ? 'active' : ''}`}
+        onClick={() => handleTabClick('skills')}
+        title="Skills / Spells"
+      >
+        <SpellBookIcon />
       </button>
       <div className="sidebar-spacer"></div>
       <button

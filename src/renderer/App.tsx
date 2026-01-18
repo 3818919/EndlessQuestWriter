@@ -25,6 +25,7 @@ const App: React.FC = () => {
     eifData, 
     enfData,
     ecfData,
+    esfData,
     pubDirectory, 
     activeTab,
     setActiveTab,
@@ -41,9 +42,14 @@ const App: React.FC = () => {
     deleteClass,
     duplicateClass,
     updateClass,
+    addSkill,
+    deleteSkill,
+    duplicateSkill,
+    updateSkill,
     setEifData,
     setEnfData,
     setEcfData,
+    setEsfData,
     setPubDirectory
   } = usePubData(markAsUnsaved);
 
@@ -74,33 +80,39 @@ const App: React.FC = () => {
     exportNpcs,
     exportDrops,
     exportClasses,
+    exportSkills,
     importItems,
     importNpcs,
     importDrops,
-    importClasses
+    importClasses,
+    importSkills
   } = useFileImportExport({
     eifData,
     enfData,
     ecfData,
+    esfData,
     dropsData,
     dataFolder,
     currentProject,
     setEifData,
     setEnfData,
     setEcfData,
+    setEsfData,
     setDropsData
   });
   
   // Wrapper for createProject hook to update local state
-  const createProject = async (projectName: string, gfxPath: string, eifPath?: string, enfPath?: string, ecfPath?: string, dropsPath?: string) => {
+  const createProject = async (projectName: string, gfxPath: string, eifPath?: string, enfPath?: string, ecfPath?: string, esfPath?: string, dropsPath?: string) => {
     try {
-      await createProjectHook(projectName, gfxPath, eifPath, enfPath, ecfPath, dropsPath);
+      await createProjectHook(projectName, gfxPath, eifPath, enfPath, ecfPath, esfPath, dropsPath);
       
       // Load the project data into local state
       const projectData = await selectProjectHook(projectName);
       if (projectData) {
         if (projectData.items) setEifData({ version: 1, items: projectData.items });
         if (projectData.npcs) setEnfData({ version: 1, npcs: projectData.npcs });
+        if (projectData.classes) setEcfData({ version: 1, classes: projectData.classes });
+        if (projectData.skills) setEsfData({ version: 1, skills: projectData.skills });
         if (projectData.drops) setDropsData(projectData.drops);
         setPubDirectory(dataFolder);
       }
@@ -108,6 +120,8 @@ const App: React.FC = () => {
       const importMsg = [];
       if (eifPath) importMsg.push('Items');
       if (enfPath) importMsg.push('NPCs');
+      if (ecfPath) importMsg.push('Classes');
+      if (esfPath) importMsg.push('Skills');
       if (dropsPath) importMsg.push('Drops');
       const imported = importMsg.length > 0 ? `\n\nImported: ${importMsg.join(', ')}` : '';
       
@@ -127,6 +141,7 @@ const App: React.FC = () => {
           setEifData,
           setEnfData,
           setEcfData,
+          setEsfData,
           setDropsData,
           restoreEquipment,
           setGender,
@@ -251,6 +266,7 @@ const App: React.FC = () => {
         eifData,
         enfData,
         ecfData,
+        esfData,
         dropsData,
         equippedItems,
         appearance: {
@@ -291,6 +307,7 @@ const App: React.FC = () => {
     setEifData({ version: 1, items: {} });
     setEnfData({ version: 1, npcs: {} });
     setEcfData({ version: 1, classes: {} });
+    setEsfData({ version: 1, skills: {} });
     setDropsData(new Map());
     setPubDirectory(null);
     
@@ -336,6 +353,7 @@ const App: React.FC = () => {
       eifData={eifData}
       enfData={enfData}
       ecfData={ecfData}
+      esfData={esfData}
       dropsData={dropsData}
       pubDirectory={pubDirectory}
       addItem={addItem}
@@ -350,6 +368,10 @@ const App: React.FC = () => {
       deleteClass={deleteClass}
       duplicateClass={duplicateClass}
       updateClass={updateClass}
+      addSkill={addSkill}
+      deleteSkill={deleteSkill}
+      duplicateSkill={duplicateSkill}
+      updateSkill={updateSkill}
       updateNpcDrops={updateNpcDrops}
       saveDropsFile={saveDropsFile}
       equippedItems={equippedItems}
@@ -381,10 +403,12 @@ const App: React.FC = () => {
       importNpcs={importNpcs}
       importDrops={importDrops}
       importClasses={importClasses}
+      importSkills={importSkills}
       exportItems={exportItems}
       exportNpcs={exportNpcs}
       exportDrops={exportDrops}
       exportClasses={exportClasses}
+      exportSkills={exportSkills}
       loadDirectory={loadDirectory}
     />
   );

@@ -2,18 +2,21 @@ import { useCallback } from 'react';
 import { EIFParser } from '../../eif-parser';
 import { ENFParser } from '../../enf-parser';
 import { ECFParser } from '../../ecf-parser';
+import { ESFParser } from '../../esf-parser';
 import { recordToArray } from '../../utils/dataTransforms';
 
 interface UseFileImportExportProps {
   eifData: { version: number; items: Record<number, any> };
   enfData: { version: number; npcs: Record<number, any> };
   ecfData: { version: number; classes: Record<number, any> };
+  esfData: { version: number; skills: Record<number, any> };
   dropsData: Map<number, any[]>;
   dataFolder: string;
   currentProject: string;
   setEifData: (data: any) => void;
   setEnfData: (data: any) => void;
   setEcfData: (data: any) => void;
+  setEsfData: (data: any) => void;
   setDropsData: (data: Map<number, any[]>) => void;
 }
 
@@ -21,12 +24,14 @@ export const useFileImportExport = ({
   eifData,
   enfData,
   ecfData,
+  esfData,
   dropsData,
   dataFolder,
   currentProject,
   setEifData,
   setEnfData,
   setEcfData,
+  setEsfData,
   setDropsData
 }: UseFileImportExportProps) => {
   const isElectron = typeof window !== 'undefined' && window.electronAPI;
@@ -318,14 +323,78 @@ export const useFileImportExport = ({
     }
   }, [dataFolder, currentProject, setEcfData]);
 
+  const exportSkills = useCallback(async () => {
+    if (!isElectron || !window.electronAPI) return;
+    
+    try {
+      const result = await window.electronAPI.saveFile('dsl001.esf', [
+        { name: 'ESF Files', extensions: ['esf'] }
+      ]);
+      
+      if (!result) return;
+      
+      const serializedData = ESFParser.serialize(esfData);
+      const writeResult = await window.electronAPI.writeFile(result, serializedData);
+      
+      if (writeResult.success) {
+        alert(`Skills exported successfully to: ${result}`);
+      } else {
+        throw new Error(writeResult.error);
+      }
+    } catch (error) {
+      console.error('Error exporting skills:', error);
+      alert('Error exporting skills: ' + (error as Error).message);
+    }
+  }, [esfData]);
+
+  const importSkills = useCallback(async () => {
+    if (!isElectron || !window.electronAPI) return;
+    
+    try {
+      const result = await window.electronAPI.openFile([
+        { name: 'ESF Files', extensions: ['esf'] }
+      ]);
+      
+      if (!result) return;
+      
+      const fileData = await window.electronAPI.readFile(result);
+      if (fileData.success) {
+        const esfArray = new Uint8Array(fileData.data);
+        const parsedData = ESFParser.parse(esfArray.buffer);
+        
+        const skills: Record<number, any> = {};
+        for (const skill of parsedData.records) {
+          skills[skill.id] = skill;
+        }
+        
+        setEsfData({ version: 1, skills });
+        
+        // Save to project JSON
+        if (dataFolder && currentProject) {
+          const projectFolder = `${dataFolder}/${currentProject}`;
+          const skillsArray = recordToArray(skills);
+          const skillsPath = `${projectFolder}/skills.json`;
+          await window.electronAPI.writeTextFile(skillsPath, JSON.stringify(skillsArray, null, 2));
+        }
+        
+        alert(`${Object.keys(skills).length} skills imported successfully!`);
+      }
+    } catch (error) {
+      console.error('Error importing skills:', error);
+      alert('Error importing skills: ' + (error as Error).message);
+    }
+  }, [dataFolder, currentProject, setEsfData]);
+
   return {
     exportItems,
     exportNpcs,
     exportDrops,
     exportClasses,
+    exportSkills,
     importItems,
     importNpcs,
     importDrops,
-    importClasses
+    importClasses,
+    importSkills
   };
 };
