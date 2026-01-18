@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import ItemList from '../components/items/ItemList';
 import NpcList from '../components/npcs/NpcList';
 import ClassList from '../components/classes/ClassList';
@@ -155,13 +155,24 @@ const EditorPage: React.FC<EditorPageProps> = ({
 }) => {
   // UI state - lives in EditorPage since it's editor-specific
   const [appearanceTab, setAppearanceTab] = useState('appearance');
-  const [npcTab, setNpcTab] = useState('stats');
+  const [npcTab, setNpcTab] = useState('drops');
   const [leftPanelMinimized, setLeftPanelMinimized] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [selectedNpcId, setSelectedNpcId] = useState<number | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+
+  // Select first NPC when switching to NPCs tab
+  useEffect(() => {
+    if (activeTab === 'npcs' && selectedNpcId === null && enfData.npcs) {
+      const npcIds = Object.keys(enfData.npcs).map(Number).filter(id => id > 0);
+      if (npcIds.length > 0) {
+        const firstNpcId = Math.min(...npcIds);
+        setSelectedNpcId(firstNpcId);
+      }
+    }
+  }, [activeTab, selectedNpcId, enfData.npcs]);
 
   // Resizable panel hook - only used in editor
   const {
