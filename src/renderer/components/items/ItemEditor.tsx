@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ItemType, ItemSize, ItemSubtype, ItemSpecial } from 'eolib';
 
 interface Item {
   id: number;
@@ -32,18 +33,11 @@ interface ItemEditorProps {
 // Check if running in Electron
 const isElectron = typeof window !== 'undefined' && window.electronAPI;
 
-const ITEM_TYPES = {
-  0: 'Static', 1: 'UnknownType1', 2: 'Money', 3: 'Heal', 4: 'Teleport',
-  5: 'Spell', 6: 'EXPReward', 7: 'StatReward', 8: 'SkillReward', 9: 'Key',
-  10: 'Weapon', 11: 'Shield', 12: 'Armor', 13: 'Hat', 14: 'Boots',
-  15: 'Gloves', 16: 'Accessory', 17: 'Belt', 18: 'Necklace',
-  19: 'Ring', 20: 'Armlet', 21: 'Bracer', 22: 'Beer',
-  23: 'EffectPotion', 24: 'HairDye', 25: 'CureCurse'
-};
-
-const ITEM_SIZES = {
-  0: '1x1', 1: '1x2', 2: '1x3', 3: '1x4',
-  4: '2x1', 5: '2x2', 6: '2x3', 7: '2x4'
+// Helper to convert enum to dropdown options
+const enumToOptions = (enumObj: any) => {
+  return Object.entries(enumObj)
+    .filter(([key]) => isNaN(Number(key))) // Filter out reverse mappings
+    .map(([key, value]) => ({ value: value as number, label: key }));
 };
 
 export default function ItemEditor({ 
@@ -191,7 +185,7 @@ export default function ItemEditor({
               onChange={(e) => handleInputChange('type', parseInt(e.target.value))}
               className="form-select"
             >
-              {Object.entries(ITEM_TYPES).map(([value, label]) => (
+              {enumToOptions(ItemType).map(({ value, label }) => (
                 <option key={value} value={value}>{label}</option>
               ))}
             </select>
@@ -199,24 +193,28 @@ export default function ItemEditor({
 
           <div className="form-group">
             <label>Sub Type</label>
-            <input
-              type="number"
+            <select
               value={item.subType || 0}
-              onChange={(e) => handleInputChange('subType', parseInt(e.target.value) || 0)}
-              className="form-input"
-              style={{ width: '80px' }}
-            />
+              onChange={(e) => handleInputChange('subType', parseInt(e.target.value))}
+              className="form-select"
+            >
+              {enumToOptions(ItemSubtype).map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">
             <label>Special</label>
-            <input
-              type="number"
+            <select
               value={item.special || 0}
-              onChange={(e) => handleInputChange('special', parseInt(e.target.value) || 0)}
-              className="form-input"
-              style={{ width: '80px' }}
-            />
+              onChange={(e) => handleInputChange('special', parseInt(e.target.value))}
+              className="form-select"
+            >
+              {enumToOptions(ItemSpecial).map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
           </div>
 
           {/* Stats */}
@@ -499,7 +497,7 @@ export default function ItemEditor({
               className="form-input"
               style={{ width: '100px' }}
             >
-              {Object.entries(ITEM_SIZES).map(([value, label]) => (
+              {enumToOptions(ItemSize).map(({ value, label }) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
