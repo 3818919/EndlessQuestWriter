@@ -25,16 +25,16 @@ const SkillPreview: React.FC<SkillPreviewProps> = ({ skill, loadGfx, gfxFolder }
     const loadSpellGraphic = async () => {
       const baseResourceId = 101 + (skill.graphicId - 1) * 3;
       const inFrontResourceId = baseResourceId + 2;
-      // Don't subtract 100 - GFX 024 resources are already in 100+ range
-      const gfxResourceId = inFrontResourceId;
+      // Don't subtract 100 - our GFX 024 has resources in 100+ range already
+      const resourceId = inFrontResourceId;
       
       console.log(`[SkillPreview] Loading spell animation for "${skill.name}" (ID: ${skill.id})`);
       console.log(`  - graphicId: ${skill.graphicId}`);
       console.log(`  - baseResourceId: ${baseResourceId}`);
       console.log(`  - inFrontResourceId: ${inFrontResourceId}`);
-      console.log(`  - GFX 024 resourceId: ${gfxResourceId}`);
+      console.log(`  - resourceId: ${resourceId}`);
       
-      const imageUrl = await loadGfx(24, gfxResourceId);
+      const imageUrl = await loadGfx(24, resourceId);
       console.log(`  - Result: ${imageUrl ? 'SUCCESS' : 'FAILED (null)'}`);
       
       if (imageUrl) {
