@@ -41,7 +41,8 @@ export default function ItemList({
   leftPanelMinimized,
   onResetFileSelection,
   onLoadEIFFromPath,
-  onSelectGfxFromPath
+  onSelectGfxFromPath,
+  currentProject
 }: {
   items: Record<number, any>;
   selectedItemId: number | null;
@@ -62,6 +63,7 @@ export default function ItemList({
   onResetFileSelection: () => void;
   onLoadEIFFromPath: (path: string) => void;
   onSelectGfxFromPath: (path: string) => void;
+  currentProject?: string;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -289,7 +291,7 @@ export default function ItemList({
           <button 
             onClick={onAddItem}
             className="btn btn-success btn-small"
-            disabled={!currentFile}
+            disabled={!currentFile && !currentProject}
           >
             + Add Item
           </button>

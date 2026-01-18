@@ -32,6 +32,7 @@ interface NpcListProps {
   loadGfx: (gfxNumber: number, resourceId?: number) => Promise<string | null>;
   gfxFolder: string | null;
   preloadGfxBatch?: (requests: Array<{ gfxNumber: number; resourceId: number }>) => void;
+  currentProject?: string;
 }
 
 const NpcList: React.FC<NpcListProps> = ({
@@ -48,7 +49,8 @@ const NpcList: React.FC<NpcListProps> = ({
   onResetFileSelection: _onResetFileSelection,
   loadGfx,
   gfxFolder,
-  preloadGfxBatch
+  preloadGfxBatch,
+  currentProject
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterPopup, setShowFilterPopup] = useState(false);
@@ -126,7 +128,7 @@ const NpcList: React.FC<NpcListProps> = ({
           <button 
             onClick={onAddNpc}
             className="btn btn-success btn-small"
-            disabled={!currentFile}
+            disabled={!currentFile && !currentProject}
           >
             + Add NPC
           </button>

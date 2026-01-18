@@ -323,6 +323,7 @@ const EditorPage: React.FC<EditorPageProps> = ({
               onResetFileSelection={handleResetFileSelection}
               onLoadEIFFromPath={handleLoadDataFromPath}
               onSelectGfxFromPath={handleLoadDataFromPath}
+              currentProject={currentProject}
             />
           </div>
           
@@ -347,6 +348,7 @@ const EditorPage: React.FC<EditorPageProps> = ({
               loadGfx={loadGfx}
               gfxFolder={gfxFolder}
               preloadGfxBatch={preloadGfxBatch}
+              currentProject={currentProject}
             />
           </div>
           
@@ -414,6 +416,7 @@ const EditorPage: React.FC<EditorPageProps> = ({
               }}
               currentFile={pubDirectory}
               leftPanelMinimized={leftPanelMinimized}
+              currentProject={currentProject}
             />
           </div>
         </div>

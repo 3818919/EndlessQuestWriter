@@ -14,6 +14,7 @@ interface InnListProps {
   onDuplicateInn: (inn: InnRecord) => void;
   currentFile: string | null;
   leftPanelMinimized: boolean;
+  currentProject?: string;
 }
 
 export default function InnList({ 
@@ -24,7 +25,8 @@ export default function InnList({
   onDeleteInn: _onDeleteInn,
   onDuplicateInn: _onDuplicateInn,
   currentFile,
-  leftPanelMinimized
+  leftPanelMinimized,
+  currentProject
 }: InnListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterPopup, setShowFilterPopup] = useState(false);
@@ -85,7 +87,7 @@ export default function InnList({
           <button 
             onClick={onAddInn}
             className="btn btn-success btn-small"
-            disabled={!currentFile}
+            disabled={!currentFile && !currentProject}
           >
             + Add Inn
           </button>
