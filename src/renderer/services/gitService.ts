@@ -308,4 +308,433 @@ export class GitService {
       return '';
     }
   }
+
+  /**
+   * Discard changes in a file (restore to last commit)
+   */
+  static async discardChanges(projectPath: string, filePath: string): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git checkout -- "${filePath}"`);
+      return { success: result.exitCode === 0, error: result.stderr };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Amend the last commit with staged changes
+   */
+  static async amendCommit(projectPath: string, message: string): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(
+        `cd "${projectPath}" && git commit --amend -m "${message.replace(/"/g, '\\"')}"`
+      );
+      return { success: result.exitCode === 0, error: result.stderr };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Create a default .gitignore file for OakTree projects
+   */
+  static async createDefaultGitignore(projectPath: string): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const gitignoreContent = `# Editor directories
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# Build artifacts (if any)
+dist/
+build/
+`;
+
+      const result = await window.electronAPI.runCommand(
+        `cd "${projectPath}" && cat > .gitignore << 'EOF'\n${gitignoreContent}EOF`
+      );
+      return { success: result.exitCode === 0, error: result.stderr };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * List all branches
+   */
+  static async listBranches(projectPath: string): Promise<string[]> {
+    if (!isElectron || !window.electronAPI) {
+      return [];
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git branch --format="%(refname:short)"`);
+      
+      if (result.exitCode !== 0) {
+        return [];
+      }
+
+      return result.stdout
+        .split('\n')
+        .map(b => b.trim())
+        .filter(b => b.length > 0);
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * Create a new branch
+   */
+  static async createBranch(projectPath: string, branchName: string): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git branch "${branchName}"`);
+      return { success: result.exitCode === 0, error: result.stderr };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Switch to a different branch
+   */
+  static async switchBranch(projectPath: string, branchName: string): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git checkout "${branchName}"`);
+      return { success: result.exitCode === 0, error: result.stderr };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Delete a branch
+   */
+  static async deleteBranch(projectPath: string, branchName: string, force: boolean = false): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const flag = force ? '-D' : '-d';
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git branch ${flag} "${branchName}"`);
+      return { success: result.exitCode === 0, error: result.stderr };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Get git config value
+   */
+  static async getConfig(projectPath: string, key: string): Promise<string> {
+    if (!isElectron || !window.electronAPI) {
+      return '';
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git config ${key}`);
+      return result.exitCode === 0 ? result.stdout.trim() : '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  /**
+   * Set git config value
+   */
+  static async setConfig(projectPath: string, key: string, value: string): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git config ${key} "${value}"`);
+      return { success: result.exitCode === 0, error: result.stderr };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Add a remote repository
+   */
+  static async addRemote(projectPath: string, name: string, url: string): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git remote add ${name} "${url}"`);
+      return { success: result.exitCode === 0, error: result.stderr };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Get list of remotes
+   */
+  static async getRemotes(projectPath: string): Promise<{ name: string; url: string }[]> {
+    if (!isElectron || !window.electronAPI) {
+      return [];
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git remote -v`);
+      
+      if (result.exitCode !== 0) {
+        return [];
+      }
+
+      const remotes: { name: string; url: string }[] = [];
+      const lines = result.stdout.split('\n').filter(line => line.trim());
+      const seen = new Set<string>();
+
+      for (const line of lines) {
+        const parts = line.split(/\s+/);
+        if (parts.length >= 2) {
+          const name = parts[0];
+          const url = parts[1];
+          const key = `${name}:${url}`;
+          
+          if (!seen.has(key)) {
+            remotes.push({ name, url });
+            seen.add(key);
+          }
+        }
+      }
+
+      return remotes;
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * Push to remote
+   */
+  static async push(projectPath: string, remoteName: string = 'origin', branchName?: string): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const branch = branchName || await this.getCurrentBranch(projectPath);
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git push ${remoteName} ${branch}`);
+      return { success: result.exitCode === 0, error: result.stderr || result.stdout };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Push with upstream tracking
+   */
+  static async pushSetUpstream(projectPath: string, remoteName: string = 'origin', branchName?: string): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const branch = branchName || await this.getCurrentBranch(projectPath);
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git push -u ${remoteName} ${branch}`);
+      return { success: result.exitCode === 0, error: result.stderr || result.stdout };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Pull from remote
+   */
+  static async pull(projectPath: string, remoteName: string = 'origin', branchName?: string): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const branch = branchName || await this.getCurrentBranch(projectPath);
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git pull ${remoteName} ${branch}`);
+      return { success: result.exitCode === 0, error: result.stderr || result.stdout };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Fetch from remote
+   */
+  static async fetch(projectPath: string, remoteName: string = 'origin'): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git fetch ${remoteName}`);
+      return { success: result.exitCode === 0, error: result.stderr || result.stdout };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Get commit details (files changed in a commit)
+   */
+  static async getCommitDetails(projectPath: string, commitHash: string): Promise<{ files: string[]; diff: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { files: [], diff: '' };
+    }
+
+    try {
+      // Get list of files
+      const filesResult = await window.electronAPI.runCommand(
+        `cd "${projectPath}" && git show --pretty="" --name-only ${commitHash}`
+      );
+      
+      const files = filesResult.exitCode === 0 
+        ? filesResult.stdout.split('\n').filter(f => f.trim())
+        : [];
+
+      // Get full diff
+      const diffResult = await window.electronAPI.runCommand(
+        `cd "${projectPath}" && git show ${commitHash}`
+      );
+      
+      const diff = diffResult.exitCode === 0 ? diffResult.stdout : '';
+
+      return { files, diff };
+    } catch (error) {
+      return { files: [], diff: '' };
+    }
+  }
+
+  /**
+   * Stash current changes
+   */
+  static async stash(projectPath: string, message?: string): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const cmd = message 
+        ? `cd "${projectPath}" && git stash push -m "${message}"`
+        : `cd "${projectPath}" && git stash`;
+      const result = await window.electronAPI.runCommand(cmd);
+      return { success: result.exitCode === 0, error: result.stderr };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Apply most recent stash
+   */
+  static async stashPop(projectPath: string): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git stash pop`);
+      return { success: result.exitCode === 0, error: result.stderr };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * List all stashes
+   */
+  static async getStashes(projectPath: string): Promise<{ index: number; message: string }[]> {
+    if (!isElectron || !window.electronAPI) {
+      return [];
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git stash list`);
+      
+      if (result.exitCode !== 0) {
+        return [];
+      }
+
+      const stashes: { index: number; message: string }[] = [];
+      const lines = result.stdout.split('\n').filter(line => line.trim());
+
+      for (const line of lines) {
+        const match = line.match(/^stash@\{(\d+)\}:\s*(.+)$/);
+        if (match) {
+          stashes.push({
+            index: parseInt(match[1]),
+            message: match[2]
+          });
+        }
+      }
+
+      return stashes;
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * Apply specific stash by index
+   */
+  static async stashApply(projectPath: string, index: number): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git stash apply stash@{${index}}`);
+      return { success: result.exitCode === 0, error: result.stderr };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Drop specific stash by index
+   */
+  static async stashDrop(projectPath: string, index: number): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron || !window.electronAPI) {
+      return { success: false, error: 'Electron API not available' };
+    }
+
+    try {
+      const result = await window.electronAPI.runCommand(`cd "${projectPath}" && git stash drop stash@{${index}}`);
+      return { success: result.exitCode === 0, error: result.stderr };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
 }
