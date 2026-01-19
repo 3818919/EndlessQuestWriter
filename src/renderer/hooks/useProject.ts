@@ -6,11 +6,14 @@ import { ESFParser } from '../../esf-parser';
 import { EQFParser, QuestData } from '../../eqf-parser';
 import { recordToArray, arrayToRecord } from '../../utils/dataTransforms';
 
+export type TabType = 'items' | 'npcs' | 'classes' | 'skills' | 'inns' | 'quests';
+
 interface ProjectConfig {
   name: string;
   gfxPath: string;
   createdAt: string;
   lastModified: string;
+  tabOrder?: TabType[];
 }
 
 interface ProjectData {
@@ -37,10 +40,12 @@ interface UseProjectReturn {
   projectName: string; // Just the project name
   gfxFolder: string;
   pubDirectory: string | null;
+  tabOrder: TabType[];
   createProject: (projectName: string, gfxPath: string, eifPath?: string, enfPath?: string, ecfPath?: string, esfPath?: string, dropsPath?: string) => Promise<void>;
   selectProject: (projectName: string) => Promise<ProjectData | null>;
   deleteProject: (projectName: string) => Promise<void>;
   updateProjectSettings: (settings: { projectName?: string; gfxPath?: string; pubDirectory?: string }) => Promise<void>;
+  saveTabOrder: (newTabOrder: TabType[]) => Promise<void>;
   setCurrentProject: (projectName: string) => void;
   setGfxFolder: (path: string) => void;
   setPubDirectory: (path: string | null) => void;
@@ -58,6 +63,7 @@ export const useProject = (): UseProjectReturn => {
   const [gfxFolder, setGfxFolder] = useState('');
   const [pubDirectory, setPubDirectory] = useState<string | null>(null);
   const [oaktreeDir, setOaktreeDir] = useState(''); // Internal: .oaktree directory
+  const [tabOrder, setTabOrder] = useState<TabType[]>(['items', 'npcs', 'classes', 'skills', 'inns', 'quests']);
 
   const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
 
@@ -102,7 +108,8 @@ export const useProject = (): UseProjectReturn => {
       name: projectName,
       gfxPath: gfxPath,
       createdAt: new Date().toISOString(),
-      lastModified: new Date().toISOString()
+      lastModified: new Date().toISOString(),
+      tabOrder: ['items', 'npcs', 'classes', 'skills', 'inns', 'quests']
     };
 
     const configPath = `${projectFolder}/config.json`;
@@ -306,6 +313,14 @@ export const useProject = (): UseProjectReturn => {
         const config: ProjectConfig = JSON.parse(configResult.data);
         console.log('Loaded config:', config);
         setGfxFolder(config.gfxPath);
+        
+        // Load tab order, with default fallback
+        if (config.tabOrder && Array.isArray(config.tabOrder)) {
+          setTabOrder(config.tabOrder);
+        } else {
+          // Use default order if not present in config
+          setTabOrder(['items', 'npcs', 'classes', 'skills', 'inns', 'quests']);
+        }
       }
       
       // Load items.json
@@ -890,15 +905,51 @@ export const useProject = (): UseProjectReturn => {
     }
   }, [currentProject]);
 
+  const saveTabOrder = useCallback(async (newTabOrder: TabType[]) => {
+    if (!currentProject || !isElectron || !window.electronAPI) {
+      throw new Error('No active project');
+    }
+
+    try {
+      const configPath = `${currentProject}/config.json`;
+      const configResult = await window.electronAPI.readTextFile(configPath);
+      
+      if (!configResult.success) {
+        throw new Error(`Failed to read config: ${configResult.error}`);
+      }
+
+      const config: ProjectConfig = JSON.parse(configResult.data);
+      config.tabOrder = newTabOrder;
+      config.lastModified = new Date().toISOString();
+
+      const writeResult = await window.electronAPI.writeTextFile(
+        configPath,
+        JSON.stringify(config, null, 2)
+      );
+
+      if (!writeResult.success) {
+        throw new Error(`Failed to save tab order: ${writeResult.error}`);
+      }
+
+      setTabOrder(newTabOrder);
+      console.log('Tab order saved:', newTabOrder);
+    } catch (error) {
+      console.error('Error saving tab order:', error);
+      throw error;
+    }
+  }, [currentProject]);
+
   return {
     currentProject,
     projectName,
     gfxFolder,
     pubDirectory,
+    tabOrder,
     createProject,
     selectProject,
     deleteProject,
     updateProjectSettings,
+    saveTabOrder,
     setCurrentProject,
     setGfxFolder,
     setPubDirectory,

@@ -1,32 +1,171 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Editor, { Monaco } from '@monaco-editor/react';
 import { QuestData, EQFParser } from '../../../eqf-parser';
 import { registerEQFLanguage, EQF_LANGUAGE_ID } from '../../utils/eqfLanguage';
+
+// EO+ Action and Rule documentation
+function getEQFDocumentation(word: string): { signature: string; description: string } | null {
+  const docs: Record<string, { signature: string; description: string }> = {
+    // Actions
+    AddNpcText: { signature: '`AddNpcText(npcQuestId, "message")`', description: 'Displays dialog text from an NPC in the quest dialog window.' },
+    AddNpcInput: { signature: '`AddNpcInput(npcQuestId, inputId, "message")`', description: 'Adds a clickable link option in the dialog window. Use with InputNpc() rule.' },
+    AddNpcChat: { signature: '`AddNpcChat(npcQuestId, "message")`', description: 'Displays an NPC chat balloon (random chance) during the quest state.' },
+    AddNpcPM: { signature: '`AddNpcPM("name", "message")`', description: 'Displays a private message in the dialog window with a custom name.' },
+    GiveItem: { signature: '`GiveItem(itemId, amount)`', description: 'Rewards the player with an item added to their inventory.' },
+    RemoveItem: { signature: '`RemoveItem(itemId, amount)`', description: 'Removes an item from the player\'s inventory.' },
+    GiveExp: { signature: '`GiveExp(amount)`', description: 'Rewards the player with experience points.' },
+    GiveBankItem: { signature: '`GiveBankItem(itemId, amount)`', description: 'Rewards the player with an item stored directly in their bank locker.' },
+    RemoveBankItem: { signature: '`RemoveBankItem(itemId, amount)`', description: 'Removes an item from the player\'s bank locker.' },
+    SetClass: { signature: '`SetClass(classId)`', description: 'Changes the player\'s class to the specified class ID.' },
+    SetRace: { signature: '`SetRace(raceId)`', description: 'Changes the player\'s race to the specified race ID.' },
+    SetState: { signature: '`SetState("stateName")`', description: 'Forces a state change without requiring rules to be satisfied.' },
+    ShowHint: { signature: '`ShowHint("message")`', description: 'Displays a hint message in the client\'s information bar.' },
+    PlaySound: { signature: '`PlaySound(soundId)`', description: 'Plays a sound effect for the player.' },
+    PlayEffect: { signature: '`PlayEffect(effectId)`', description: 'Plays a special effect on the player.' },
+    PlayMusic: { signature: '`PlayMusic(musicId)`', description: 'Plays a MIDI music file for the player.' },
+    Reset: { signature: '`Reset()`', description: 'Resets the quest back to the Begin state, allowing it to be repeated.' },
+    End: { signature: '`End()`', description: 'Ends the quest permanently. The quest will display in the player\'s quest history as completed.' },
+    SetCoord: { signature: '`SetCoord(mapId, x, y)`', description: 'Teleports the player to the specified map coordinates.' },
+    SetMap: { signature: '`SetMap(mapId, x, y)`', description: 'Moves the player to the specified map and coordinates.' },
+    Quake: { signature: '`Quake(magnitude)` or `Quake(magnitude, mapId)`', description: 'Creates an earthquake effect on the specified map or the player\'s current map.' },
+    QuakeWorld: { signature: '`QuakeWorld(magnitude)`', description: 'Creates an earthquake effect on all maps.' },
+    SetHome: { signature: '`SetHome(home)`', description: 'Sets the player\'s home town.' },
+    SetTitle: { signature: '`SetTitle(title)`', description: 'Sets the player\'s title.' },
+    GiveKarma: { signature: '`GiveKarma(amount)`', description: 'Awards karma points to the player.' },
+    RemoveKarma: { signature: '`RemoveKarma(amount)`', description: 'Removes karma points from the player.' },
+    AddKillNpc: { signature: '`AddKillNpc(npcId)`', description: 'Adds an NPC to the kill count tracker for the quest.' },
+    RemoveKillNpc: { signature: '`RemoveKillNpc(npcId)`', description: 'Removes an NPC from the kill count tracker.' },
+    ResetKillNpc: { signature: '`ResetKillNpc(npcId)`', description: 'Resets the kill count for a specific NPC.' },
+    StartQuest: { signature: '`StartQuest(questId)`', description: 'Starts another quest if not already active.' },
+    ResetQuest: { signature: '`ResetQuest(questId)`', description: 'Resets the specified quest.' },
+    
+    // Rules
+    Always: { signature: '`Always()`', description: 'Rule always satisfied - immediately advances to next state with no requirements.' },
+    TalkedToNpc: { signature: '`TalkedToNpc(npcQuestId)`', description: 'Satisfied when the player opens a dialog with the specified NPC.' },
+    InputNpc: { signature: '`InputNpc(inputId)`', description: 'Satisfied when the player clicks a dialog link with the specified input ID. Use with AddNpcInput().' },
+    KilledNpcs: { signature: '`KilledNpcs(npcId, amount)`', description: 'Satisfied when the player has killed the specified amount of NPCs.' },
+    KilledPlayers: { signature: '`KilledPlayers(amount)`', description: 'Satisfied when the player has killed the specified amount of players in PK zones.' },
+    GotItems: { signature: '`GotItems(itemId, amount)`', description: 'Satisfied when the player has the specified amount of items in their inventory.' },
+    LostItems: { signature: '`LostItems(itemId, amount)`', description: 'Returns to previous state if player loses required items. Use after GotItems() to verify they still have items.' },
+    EnterCoord: { signature: '`EnterCoord(mapId, x, y)`', description: 'Satisfied when the player stands on the specified map coordinates.' },
+    LeaveCoord: { signature: '`LeaveCoord(mapId, x, y)`', description: 'Satisfied when the player leaves the specified map coordinates.' },
+    EnterMap: { signature: '`EnterMap(mapId)`', description: 'Satisfied when the player enters the specified map.' },
+    LeaveMap: { signature: '`LeaveMap(mapId)`', description: 'Satisfied when the player leaves the specified map.' },
+    EnterArea: { signature: '`EnterArea(mapId, x, y, radius)`', description: 'Satisfied when the player enters a circular area around the specified coordinates.' },
+    LeaveArea: { signature: '`LeaveArea(mapId, x, y, radius)`', description: 'Satisfied when the player leaves a circular area around the specified coordinates.' },
+    IsClass: { signature: '`IsClass(classId)`', description: 'Satisfied if the player\'s class matches the specified class ID.' },
+    IsRace: { signature: '`IsRace(raceId)`', description: 'Satisfied if the player\'s race matches the specified race ID.' },
+    IsGender: { signature: '`IsGender(genderId)`', description: 'Satisfied if the player\'s gender matches the specified ID (0=male, 1=female).' },
+    IsNamed: { signature: '`IsNamed(name)`', description: 'Satisfied if the player\'s name matches the specified name.' },
+    CitizenOf: { signature: '`CitizenOf(homeName)`', description: 'Satisfied if the player is a citizen of the specified home town.' },
+    GotSpell: { signature: '`GotSpell(spellId)`', description: 'Satisfied when the player has learned the specified spell.' },
+    LostSpell: { signature: '`LostSpell(spellId)`', description: 'Returns to previous state if player forgets the required spell.' },
+    UsedItem: { signature: '`UsedItem(itemId, amount)`', description: 'Satisfied when the player has used the specified item the required number of times.' },
+    UsedSpell: { signature: '`UsedSpell(spellId, amount)`', description: 'Satisfied when the player has cast the specified spell the required number of times.' },
+    IsWearing: { signature: '`IsWearing(itemId)`', description: 'Satisfied if the player has the specified item equipped.' },
+    NotWearing: { signature: '`NotWearing(itemId)`', description: 'Satisfied if the player does NOT have the specified item equipped.' },
+    Unequipped: { signature: '`Unequipped()`', description: 'Satisfied if the player has nothing equipped.' },
+    Stepped: { signature: '`Stepped(amount)`', description: 'Satisfied when the player has taken the specified number of steps since entering the state.' },
+    Die: { signature: '`Die()` or `Die(count)`', description: 'Satisfied when the player dies (optionally a specific number of times).' },
+    TimeElapsed: { signature: '`TimeElapsed(time)`', description: 'Satisfied when the specified time has passed since entering the state. Format: number + h/m/s (e.g., "30m", "2h").' },
+    WaitMinutes: { signature: '`WaitMinutes(minutes)`', description: 'Satisfied when the specified minutes have passed since entering the state.' },
+    WaitSeconds: { signature: '`WaitSeconds(seconds)`', description: 'Satisfied when the specified seconds have passed since entering the state.' },
+    FinishedQuest: { signature: '`FinishedQuest(questId)`', description: 'Satisfied if the player has completed the specified quest.' },
+    Disconnected: { signature: '`Disconnected()`', description: 'Satisfied when the player disconnects (check occurs at next login).' },
+  };
+  
+  return docs[word] || null;
+}
 
 interface QuestTextEditorProps {
   quest: QuestData;
   onSave: (updates: Partial<QuestData>) => void;
   navigateToState?: string | null;
+  onNavigateToVisual?: (stateName: string) => void;
+  theme?: 'dark' | 'light';
 }
 
-export default function QuestTextEditor({ quest, onSave, navigateToState }: QuestTextEditorProps) {
+export default function QuestTextEditor({ quest, onSave, navigateToState, onNavigateToVisual, theme = 'dark' }: QuestTextEditorProps) {
   const [eqfText, setEqfText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const monacoRef = useRef<Monaco | null>(null);
   const editorRef = useRef<any>(null);
+  const hoverProvidersRef = useRef<any[]>([]);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize EQF text from quest data
   useEffect(() => {
+    // Cancel any pending auto-save when quest changes externally
+    // This ensures visual editor changes take priority
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+    
+    // Only update if there are no unsaved local changes
+    // This allows changes from the visual editor to flow through while preserving text edits
+    if (!hasChanges) {
+      try {
+        const text = EQFParser.serialize(quest);
+        setEqfText(text);
+        setError(null);
+      } catch (err) {
+        setError(`Failed to serialize quest: ${err}`);
+      }
+    } else {
+      // If we had changes but quest changed externally, discard local changes
+      // and sync to the new quest state from visual editor
+      setHasChanges(false);
+      try {
+        const text = EQFParser.serialize(quest);
+        setEqfText(text);
+        setError(null);
+      } catch (err) {
+        setError(`Failed to serialize quest: ${err}`);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quest]); // Only run when quest changes from visual editor
+
+  // Save function
+  const handleSave = useCallback(() => {
+    if (!hasChanges) return;
+
     try {
-      const text = EQFParser.serialize(quest);
-      setEqfText(text);
+      // Parse the text to validate and convert to QuestData
+      const parsedQuest = EQFParser.parse(eqfText, quest.id);
+      
+      // Save updates
+      onSave(parsedQuest);
       setHasChanges(false);
       setError(null);
     } catch (err) {
-      setError(`Failed to serialize quest: ${err}`);
+      setError(`Parse error: ${err}`);
     }
-  }, [quest.id]); // Only update when quest ID changes
+  }, [hasChanges, eqfText, quest.id, onSave]);
+
+  // Auto-save text changes after user stops typing
+  useEffect(() => {
+    if (hasChanges) {
+      // Clear any existing timer
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+      
+      // Set a new timer to auto-save after 1 second of inactivity
+      autoSaveTimerRef.current = setTimeout(() => {
+        handleSave();
+      }, 1000);
+    }
+    
+    // Cleanup timer on unmount
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [hasChanges, eqfText, handleSave]); // Trigger when changes occur
 
   // Navigate to a specific state when requested
   useEffect(() => {
@@ -85,15 +224,77 @@ export default function QuestTextEditor({ quest, onSave, navigateToState }: Ques
     }
   }, [navigateToState, eqfText]);
 
+  // Update Monaco theme when app theme changes
+  useEffect(() => {
+    if (monacoRef.current) {
+      monacoRef.current.editor.setTheme(theme === 'light' ? 'eqf-light' : 'eqf-dark');
+    }
+  }, [theme]);
+
+  // Cleanup hover providers on unmount
+  useEffect(() => {
+    return () => {
+      // Dispose all hover providers when component unmounts
+      hoverProvidersRef.current.forEach(disposable => {
+        if (disposable && disposable.dispose) {
+          disposable.dispose();
+        }
+      });
+      hoverProvidersRef.current = [];
+    };
+  }, []);
+
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
     
+    // Clean up any previously registered hover providers
+    hoverProvidersRef.current.forEach(disposable => {
+      if (disposable && disposable.dispose) {
+        disposable.dispose();
+      }
+    });
+    hoverProvidersRef.current = [];
+    
     // Register EQF language
     registerEQFLanguage(monaco);
     
-    // Set theme
-    monaco.editor.setTheme('eqf-theme');
+    // Set theme based on app theme
+    monaco.editor.setTheme(theme === 'light' ? 'eqf-light' : 'eqf-dark');
+
+    // Register hover provider for action and rule documentation
+    const docsHoverProvider = monaco.languages.registerHoverProvider(EQF_LANGUAGE_ID, {
+      provideHover: (model, position) => {
+        const line = model.getLineContent(position.lineNumber);
+        const word = model.getWordAtPosition(position);
+        
+        if (!word) return null;
+        
+        const wordText = word.word;
+        
+        // Check if word is an action or rule type
+        const docs = getEQFDocumentation(wordText);
+        if (docs) {
+          return {
+            range: new monaco.Range(
+              position.lineNumber,
+              word.startColumn,
+              position.lineNumber,
+              word.endColumn
+            ),
+            contents: [
+              { value: `**${wordText}**` },
+              { value: docs.signature },
+              { value: docs.description },
+              { value: `[View EO+ Documentation](https://apollo-games.com/eoplus/)` }
+            ]
+          };
+        }
+        
+        return null;
+      }
+    });
+    hoverProvidersRef.current.push(docsHoverProvider);
 
     // Add save shortcut (Ctrl+S / Cmd+S)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
@@ -234,22 +435,6 @@ export default function QuestTextEditor({ quest, onSave, navigateToState }: Ques
     }
   };
 
-  const handleSave = () => {
-    if (!hasChanges) return;
-
-    try {
-      // Parse the text to validate and convert to QuestData
-      const parsedQuest = EQFParser.parse(eqfText, quest.id);
-      
-      // Save updates
-      onSave(parsedQuest);
-      setHasChanges(false);
-      setError(null);
-    } catch (err) {
-      setError(`Parse error: ${err}`);
-    }
-  };
-
   const handleRevert = () => {
     try {
       const text = EQFParser.serialize(quest);
@@ -268,73 +453,6 @@ export default function QuestTextEditor({ quest, onSave, navigateToState }: Ques
       height: '100%',
       backgroundColor: 'var(--bg-primary)'
     }}>
-      {/* Toolbar */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '8px 12px',
-        backgroundColor: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border-primary)'
-      }}>
-        <button
-          onClick={handleSave}
-          disabled={!hasChanges}
-          style={{
-            padding: '6px 16px',
-            backgroundColor: hasChanges ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-            color: hasChanges ? 'var(--text-primary)' : 'var(--text-disabled)',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: hasChanges ? 'pointer' : 'not-allowed',
-            fontSize: '13px',
-            fontWeight: '500'
-          }}
-        >
-          Save (Ctrl+S)
-        </button>
-
-        <button
-          onClick={handleRevert}
-          disabled={!hasChanges}
-          style={{
-            padding: '6px 16px',
-            backgroundColor: hasChanges ? 'var(--border-primary)' : 'var(--bg-tertiary)',
-            color: hasChanges ? 'var(--text-primary)' : 'var(--text-disabled)',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: hasChanges ? 'pointer' : 'not-allowed',
-            fontSize: '13px'
-          }}
-        >
-          Revert
-        </button>
-
-        {hasChanges && (
-          <span style={{
-            marginLeft: '8px',
-            color: 'var(--accent-warning)',
-            fontSize: '12px'
-          }}>
-            ● Unsaved changes
-          </span>
-        )}
-
-        {error && (
-          <span style={{
-            marginLeft: '8px',
-            color: 'var(--accent-danger)',
-            fontSize: '12px'
-          }}>
-            ⚠ {error}
-          </span>
-        )}
-
-        <div style={{ marginLeft: 'auto', color: 'var(--text-secondary)', fontSize: '12px' }}>
-          Quest ID: {quest.id} | {quest.questName}
-        </div>
-      </div>
-
       {/* Monaco Editor */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <Editor
@@ -343,7 +461,7 @@ export default function QuestTextEditor({ quest, onSave, navigateToState }: Ques
           value={eqfText}
           onChange={handleEditorChange}
           onMount={handleEditorDidMount}
-          theme="eqf-theme"
+          theme={theme === 'light' ? 'eqf-light' : 'eqf-dark'}
           options={{
             minimap: { enabled: true },
             fontSize: 14,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ReplyIcon from '@mui/icons-material/Reply';
@@ -8,10 +8,14 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import FileMenu from './FileMenu';
 import { CrossedSwordsIcon, SkullCrossedBonesIcon, SpellBookIcon } from './icons';
 import QuestIcon from './icons/QuestIcon';
+import DraggableTabButton from './DraggableTabButton';
+import type { TabType } from '../hooks/useProject';
 
 interface VerticalSidebarProps {
   activeTab: string;
+  tabOrder: TabType[];
   onTabChange: (tab: string) => void;
+  onTabReorder: (newOrder: TabType[]) => void;
   onSave: () => void;
   onImportItems: () => void;
   onImportNpcs: () => void;
@@ -37,7 +41,9 @@ interface VerticalSidebarProps {
 
 const VerticalSidebar: React.FC<VerticalSidebarProps> = ({
   activeTab,
+  tabOrder,
   onTabChange,
+  onTabReorder,
   onSave,
   onImportItems,
   onImportNpcs,
@@ -60,6 +66,18 @@ const VerticalSidebar: React.FC<VerticalSidebarProps> = ({
   theme,
   toggleTheme
 }) => {
+  const [draggingTab, setDraggingTab] = useState<string | null>(null);
+
+  // Tab configuration mapping
+  const tabConfig: Record<TabType, { title: string; icon: React.ReactNode }> = {
+    items: { title: 'Items', icon: <ListAltIcon /> },
+    npcs: { title: 'NPCs / Monsters', icon: <SkullCrossedBonesIcon /> },
+    classes: { title: 'Classes', icon: <CrossedSwordsIcon /> },
+    skills: { title: 'Skills / Spells', icon: <SpellBookIcon /> },
+    inns: { title: 'Inns / Spawn Points', icon: <HouseIcon /> },
+    quests: { title: 'Quests', icon: <QuestIcon size={24} /> }
+  };
+
   const handleTabClick = (tab: string) => {
     if (tab === activeTab) {
       // Clicking the active tab toggles minimization
@@ -72,6 +90,36 @@ const VerticalSidebar: React.FC<VerticalSidebarProps> = ({
         setLeftPanelMinimized(false);
       }
     }
+  };
+
+  const handleDragStart = (tabId: string) => {
+    setDraggingTab(tabId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingTab(null);
+  };
+
+  const handleDrop = (targetTabId: string) => {
+    if (!draggingTab || draggingTab === targetTabId) {
+      setDraggingTab(null);
+      return;
+    }
+
+    const currentIndex = tabOrder.indexOf(draggingTab as TabType);
+    const targetIndex = tabOrder.indexOf(targetTabId as TabType);
+
+    if (currentIndex === -1 || targetIndex === -1) {
+      setDraggingTab(null);
+      return;
+    }
+
+    const newOrder = [...tabOrder];
+    newOrder.splice(currentIndex, 1);
+    newOrder.splice(targetIndex, 0, draggingTab as TabType);
+
+    onTabReorder(newOrder);
+    setDraggingTab(null);
   };
 
   return (
@@ -93,48 +141,22 @@ const VerticalSidebar: React.FC<VerticalSidebarProps> = ({
         onExportInns={onExportInns}
         disabled={isSaveDisabled}
       />
-      <button
-        className={`left-sidebar-button ${activeTab === 'items' && !leftPanelMinimized ? 'active' : ''}`}
-        onClick={() => handleTabClick('items')}
-        title="Items"
-      >
-        <ListAltIcon />
-      </button>
-      <button
-        className={`left-sidebar-button ${activeTab === 'npcs' && !leftPanelMinimized ? 'active' : ''}`}
-        onClick={() => handleTabClick('npcs')}
-        title="NPCs / Monsters"
-      >
-        <SkullCrossedBonesIcon />
-      </button>
-      <button
-        className={`left-sidebar-button ${activeTab === 'classes' && !leftPanelMinimized ? 'active' : ''}`}
-        onClick={() => handleTabClick('classes')}
-        title="Classes"
-      >
-        <CrossedSwordsIcon />
-      </button>
-      <button
-        className={`left-sidebar-button ${activeTab === 'skills' && !leftPanelMinimized ? 'active' : ''}`}
-        onClick={() => handleTabClick('skills')}
-        title="Skills / Spells"
-      >
-        <SpellBookIcon />
-      </button>
-      <button
-        className={`left-sidebar-button ${activeTab === 'inns' && !leftPanelMinimized ? 'active' : ''}`}
-        onClick={() => handleTabClick('inns')}
-        title="Inns / Spawn Points"
-      >
-        <HouseIcon />
-      </button>
-      <button
-        className={`left-sidebar-button ${activeTab === 'quests' && !leftPanelMinimized ? 'active' : ''}`}
-        onClick={() => handleTabClick('quests')}
-        title="Quests"
-      >
-        <QuestIcon size={24} />
-      </button>
+      {tabOrder.map((tab) => (
+        <DraggableTabButton
+          key={tab}
+          id={tab}
+          isActive={activeTab === tab}
+          isMinimized={leftPanelMinimized}
+          title={tabConfig[tab].title}
+          icon={tabConfig[tab].icon}
+          onClick={() => handleTabClick(tab)}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={handleDrop}
+          isDragging={draggingTab === tab}
+        />
+      ))}
       <div className="sidebar-spacer"></div>
       <button
         className="left-sidebar-button"

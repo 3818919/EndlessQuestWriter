@@ -27,6 +27,7 @@ import CheckroomIcon from '@mui/icons-material/Checkroom';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DownloadIcon from '@mui/icons-material/Download';
 import { QuestData } from '../../eqf-parser';
+import type { TabType } from '../hooks/useProject';
 
 interface EditorPageProps {
   // Data
@@ -40,6 +41,8 @@ interface EditorPageProps {
   pubDirectory: string | null;
   activeTab: 'items' | 'npcs' | 'classes' | 'skills' | 'inns' | 'quests';
   setActiveTab: (tab: 'items' | 'npcs' | 'classes' | 'skills' | 'inns' | 'quests') => void;
+  tabOrder: TabType[];
+  onTabReorder: (newOrder: TabType[]) => void;
   
   // Project settings
   projectName: string;
@@ -154,6 +157,8 @@ const EditorPage: React.FC<EditorPageProps> = ({
   pubDirectory,
   activeTab,
   setActiveTab,
+  tabOrder,
+  onTabReorder,
   addItem,
   deleteItem,
   duplicateItem,
@@ -328,7 +333,9 @@ const EditorPage: React.FC<EditorPageProps> = ({
     <div className="app">
       <VerticalSidebar
         activeTab={activeTab}
-        onTabChange={(tab: string) => setActiveTab(tab as 'items' | 'npcs' | 'classes' | 'skills' | 'inns')}
+        tabOrder={tabOrder}
+        onTabChange={(tab: string) => setActiveTab(tab as 'items' | 'npcs' | 'classes' | 'skills' | 'inns' | 'quests')}
+        onTabReorder={onTabReorder}
         onSave={saveAllFiles}
         onImportItems={importItems}
         onImportNpcs={importNpcs}
@@ -555,6 +562,7 @@ const EditorPage: React.FC<EditorPageProps> = ({
               onSave={updateQuest}
               onExport={exportQuest}
               onDelete={deleteQuest}
+              theme={theme}
             />
           )}
         </div>

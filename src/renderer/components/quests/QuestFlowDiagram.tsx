@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Node,
@@ -12,17 +12,20 @@ import {
   BackgroundVariant,
   MarkerType,
   Handle,
-  Position
+  Position,
+  ReactFlowInstance
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { QuestData, QuestState } from '../../../eqf-parser';
 import dagre from 'dagre';
 import { toPng } from 'html-to-image';
+import StateNodeEditor from './StateNodeEditor';
 
 interface QuestFlowDiagramProps {
   quest: QuestData;
   onQuestChange: (updates: Partial<QuestData>) => void;
   onNavigateToState?: (stateName: string) => void;
+  highlightState?: string | null;
 }
 
 // Custom node component for quest states
@@ -35,6 +38,15 @@ const StateNode = ({ data }: { data: any }) => {
       data.onNavigateToState(data.label);
     } else {
       console.warn('[StateNode] No onNavigateToState callback available');
+    }
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm(`Delete state "${data.label}"?\n\nThis will remove the state and update all references to it.`)) {
+      if (data.onDeleteState) {
+        data.onDeleteState(data.stateIndex);
+      }
     }
   };
 
@@ -54,6 +66,35 @@ const StateNode = ({ data }: { data: any }) => {
       <Handle type="target" position={Position.Top} style={{ background: 'var(--accent-primary)' }} />
       <Handle type="source" position={Position.Bottom} style={{ background: 'var(--accent-primary)' }} />
       
+      {/* Delete button in top right */}
+      <button
+        onClick={handleDelete}
+        style={{
+          position: 'absolute',
+          top: '8px',
+          right: '8px',
+          background: 'none',
+          border: 'none',
+          color: 'var(--text-secondary)',
+          cursor: 'pointer',
+          padding: '2px',
+          display: 'flex',
+          alignItems: 'center',
+          fontSize: '14px',
+          transition: 'color 0.2s'
+        }}
+        onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-danger)'}
+        onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+        title="Delete state"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          <line x1="10" y1="11" x2="10" y2="17" />
+          <line x1="14" y1="11" x2="14" y2="17" />
+        </svg>
+      </button>
+      
       {/* State Name with Open Icon */}
       <div style={{ 
         fontWeight: 600, 
@@ -62,7 +103,8 @@ const StateNode = ({ data }: { data: any }) => {
         color: 'var(--accent-primary)',
         display: 'flex',
         alignItems: 'center',
-        gap: '6px'
+        gap: '6px',
+        paddingRight: '24px' // Make room for delete button
       }}>
         <span>{data.label}</span>
         <button
@@ -239,7 +281,42 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
   return { nodes: layoutedNodes, edges };
 };
 
-export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToState }: QuestFlowDiagramProps) {
+export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToState, highlightState }: QuestFlowDiagramProps) {
+  const [editingState, setEditingState] = useState<{ state: QuestState; index: number } | null>(null);
+
+  // Handler to delete a state
+  const handleDeleteState = useCallback((stateIndex: number) => {
+    const newStates = [...quest.states];
+    const deletedStateName = newStates[stateIndex].name;
+    
+    // Remove the state
+    newStates.splice(stateIndex, 1);
+    
+    // Clean up references to the deleted state in remaining states
+    newStates.forEach((state, idx) => {
+      // Remove rules that reference the deleted state
+      const updatedRules = state.rules.filter(rule => rule.gotoState !== deletedStateName);
+      
+      // Remove SetState/Goto actions that reference the deleted state
+      const updatedActions = state.actions.filter(action => {
+        if ((action.type === 'SetState' || action.type === 'Goto') && 
+            action.params.length > 0 && 
+            action.params[0] === deletedStateName) {
+          return false; // Remove this action
+        }
+        return true;
+      });
+      
+      newStates[idx] = {
+        ...newStates[idx],
+        rules: updatedRules,
+        actions: updatedActions
+      };
+    });
+    
+    onQuestChange({ states: newStates });
+  }, [quest.states, onQuestChange]);
+
   // Check if any state has an End() action
   const hasEndAction = useMemo(() => {
     return quest.states.some(state => 
@@ -266,7 +343,8 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
           display: formatRuleDisplay(rule)
         })),
         stateIndex: index,
-        onNavigateToState
+        onNavigateToState,
+        onDeleteState: handleDeleteState
       },
       position: { x: 0, y: 0 }
     }));
@@ -282,7 +360,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
     }
 
     return nodes;
-  }, [quest.states, hasEndAction, onNavigateToState]);
+  }, [quest.states, hasEndAction, onNavigateToState, handleDeleteState]);
 
   // Convert rules to edges (showing which rules lead to which states)
   const initialEdges: Edge[] = useMemo(() => {
@@ -390,6 +468,27 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
+  const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
+
+  // Callback when React Flow is initialized
+  const onInit = useCallback((instance: ReactFlowInstance) => {
+    reactFlowInstance.current = instance;
+  }, []);
+
+  // Zoom to highlighted state
+  useEffect(() => {
+    if (highlightState && reactFlowInstance.current) {
+      const node = reactFlowInstance.current.getNode(highlightState);
+      if (node) {
+        reactFlowInstance.current.fitView({
+          nodes: [node],
+          duration: 500,
+          padding: 0.5,
+          maxZoom: 1.5
+        });
+      }
+    }
+  }, [highlightState]);
 
   // Update nodes and edges when quest changes
   React.useEffect(() => {
@@ -404,9 +503,71 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
   );
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    console.log('Clicked state:', node.data.label);
-    // TODO: Open state editor panel
-  }, []);
+    // Don't open editor if it's the End node
+    if (node.id === '__END__') return;
+    
+    const stateIndex = node.data.stateIndex as number;
+    const state = quest.states[stateIndex];
+    if (state) {
+      console.log('Opening editor for state:', state.name);
+      setEditingState({ state, index: stateIndex });
+    }
+  }, [quest.states]);
+
+  const handleStateUpdate = useCallback((stateIndex: number, updates: Partial<QuestState>, nameChanged: boolean, oldName: string) => {
+    const newStates = [...quest.states];
+    
+    // Update the state itself
+    newStates[stateIndex] = {
+      ...newStates[stateIndex],
+      ...updates
+    };
+    
+    // If name changed, update all references to the old name
+    if (nameChanged && updates.name) {
+      const newName = updates.name;
+      
+      // Update all rules that reference this state
+      newStates.forEach((state, idx) => {
+        const updatedRules = state.rules.map(rule => {
+          if (rule.gotoState === oldName) {
+            // Regenerate rawText with new state name
+            const paramsStr = rule.params.map(p => 
+              typeof p === 'string' ? `"${p}"` : p
+            ).join(', ');
+            const rawText = `${rule.type}(${paramsStr}) goto ${newName}`;
+            return { ...rule, gotoState: newName, rawText };
+          }
+          return rule;
+        });
+        
+        // Update SetState and Goto actions that reference this state
+        const updatedActions = state.actions.map(action => {
+          if ((action.type === 'SetState' || action.type === 'Goto') && 
+              action.params.length > 0 && 
+              action.params[0] === oldName) {
+            const newParams = [...action.params];
+            newParams[0] = newName;
+            // Regenerate rawText with new state name
+            const paramsStr = newParams.map(p => 
+              typeof p === 'string' ? `"${p}"` : p
+            ).join(', ');
+            const rawText = `${action.type}(${paramsStr})`;
+            return { ...action, params: newParams, rawText };
+          }
+          return action;
+        });
+        
+        newStates[idx] = {
+          ...newStates[idx],
+          rules: updatedRules,
+          actions: updatedActions
+        };
+      });
+    }
+    
+    onQuestChange({ states: newStates });
+  }, [quest.states, onQuestChange]);
 
   const handleAddState = useCallback(() => {
     // Generate a new state name
@@ -421,6 +582,21 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
     // Create a new empty state
     const newState: QuestState = {
       name: newStateName,
+      description: '',
+      actions: [],
+      rules: []
+    };
+
+    // Add the new state to the quest
+    onQuestChange({
+      states: [...quest.states, newState]
+    });
+  }, [quest.states, onQuestChange]);
+
+  const handleCreateState = useCallback((stateName: string) => {
+    // Create a new empty state with the specified name
+    const newState: QuestState = {
+      name: stateName,
       description: '',
       actions: [],
       rules: []
@@ -529,6 +705,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onInit={onInit}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.2}
@@ -541,6 +718,19 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} color="var(--border-secondary)" />
         <Controls />
       </ReactFlow>
+
+      {/* State Editor Modal */}
+      {editingState && (
+        <StateNodeEditor
+          state={editingState.state}
+          stateIndex={editingState.index}
+          originalStateName={editingState.state.name}
+          allStates={quest.states}
+          onClose={() => setEditingState(null)}
+          onSave={(updates, nameChanged, oldName) => handleStateUpdate(editingState.index, updates, nameChanged, oldName)}
+          onCreateState={handleCreateState}
+        />
+      )}
     </div>
   );
 }

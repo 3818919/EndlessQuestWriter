@@ -322,6 +322,26 @@ body {
   transform: none;
 }
 
+/* Drag and Drop Styles for Tabs */
+.left-sidebar-button.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.left-sidebar-button.drag-over {
+  background: rgba(0, 122, 204, 0.2);
+  border: 2px dashed var(--accent-primary);
+  transform: scale(1.05);
+}
+
+.left-sidebar-button[draggable="true"] {
+  cursor: grab;
+}
+
+.left-sidebar-button[draggable="true"]:active {
+  cursor: grabbing;
+}
+
 .sidebar-spacer {
   flex: 1;
 }

@@ -86,10 +86,12 @@ const App: React.FC = () => {
     projectName,
     gfxFolder,
     pubDirectory: projectPubDirectory,
+    tabOrder,
     createProject: createProjectHook,
     selectProject: selectProjectHook,
     deleteProject: deleteProjectHook,
     updateProjectSettings,
+    saveTabOrder,
     setCurrentProject,
     setGfxFolder,
     setPubDirectory: setProjectPubDirectory,
@@ -252,6 +254,23 @@ const App: React.FC = () => {
     await reloadQuestData();
     return newQuestId;
   };
+
+  // Tab reordering handler
+  const handleTabReorder = async (newOrder: typeof tabOrder) => {
+    try {
+      await saveTabOrder(newOrder);
+    } catch (error) {
+      console.error('Error saving tab order:', error);
+      alert('Error saving tab order: ' + (error as Error).message);
+    }
+  };
+
+  // When project changes, set active tab to first in order
+  useEffect(() => {
+    if (currentProject && tabOrder.length > 0) {
+      setActiveTab(tabOrder[0]);
+    }
+  }, [currentProject]);
 
   // Start background GFX loading when gfxFolder is set
   useEffect(() => {
@@ -436,6 +455,8 @@ const App: React.FC = () => {
     <EditorPage
       activeTab={activeTab}
       setActiveTab={setActiveTab}
+      tabOrder={tabOrder}
+      onTabReorder={handleTabReorder}
       eifData={eifData}
       enfData={enfData}
       ecfData={ecfData}

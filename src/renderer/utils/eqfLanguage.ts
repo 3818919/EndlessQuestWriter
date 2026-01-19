@@ -104,8 +104,8 @@ export function registerEQFLanguage(monaco: any) {
   // Set tokens provider
   monaco.languages.setMonarchTokensProvider(EQF_LANGUAGE_ID, eqfLanguageTokens);
   
-  // Define theme
-  monaco.editor.defineTheme('eqf-theme', {
+  // Define dark theme
+  monaco.editor.defineTheme('eqf-dark', {
     base: 'vs-dark',
     inherit: true,
     rules: [
@@ -130,6 +130,35 @@ export function registerEQFLanguage(monaco: any) {
       'editorCursor.foreground': '#AEAFAD',
       'editor.selectionBackground': '#264F78',
       'editor.lineHighlightBackground': '#2A2A2A',
+    }
+  });
+
+  // Define light theme
+  monaco.editor.defineTheme('eqf-light', {
+    base: 'vs',
+    inherit: true,
+    rules: [
+      { token: 'comment', foreground: '008000' },
+      { token: 'keyword', foreground: 'AF00DB' },
+      { token: 'keyword.control', foreground: 'AF00DB', fontStyle: 'bold' },
+      { token: 'keyword.declaration', foreground: '0000FF' },
+      { token: 'support.function.action', foreground: '795E26' },
+      { token: 'support.function.rule', foreground: '267F99' },
+      { token: 'string', foreground: 'A31515' },
+      { token: 'string.invalid', foreground: 'CD3131' },
+      { token: 'string.escape', foreground: 'EE9900' },
+      { token: 'number', foreground: '098658' },
+      { token: 'variable.language', foreground: '001080' },
+      { token: 'identifier', foreground: '000000' },
+      { token: 'delimiter', foreground: '000000' },
+    ],
+    colors: {
+      'editor.background': '#FFFFFF',
+      'editor.foreground': '#000000',
+      'editorLineNumber.foreground': '#237893',
+      'editorCursor.foreground': '#000000',
+      'editor.selectionBackground': '#ADD6FF',
+      'editor.lineHighlightBackground': '#F0F0F0',
     }
   });
 }

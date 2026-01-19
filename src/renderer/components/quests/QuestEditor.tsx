@@ -9,29 +9,56 @@ interface QuestEditorProps {
   onSave: (questId: number, updates: Partial<QuestData>) => void;
   onExport: (questId: number) => void;
   onDelete: (questId: number) => void;
+  theme?: 'dark' | 'light';
 }
 
-export default function QuestEditor({ quest, onSave, onExport, onDelete }: QuestEditorProps) {
+export default function QuestEditor({ quest, onSave, onExport, onDelete, theme = 'dark' }: QuestEditorProps) {
   const [editorMode, setEditorMode] = useState<'text' | 'visual' | 'split'>('text');
   const [navigateToState, setNavigateToState] = useState<string | null>(null);
+  const [highlightStateInVisual, setHighlightStateInVisual] = useState<string | null>(null);
 
   const handleNavigateToState = (stateName: string) => {
     console.log('[QuestEditor] handleNavigateToState called with:', stateName);
     console.log('[QuestEditor] Current editorMode:', editorMode);
     
+    // Set the state to navigate to FIRST
+    console.log('[QuestEditor] Setting navigateToState to:', stateName);
+    setNavigateToState(stateName);
+    
     // Switch to split mode if in visual-only mode
     if (editorMode === 'visual') {
       console.log('[QuestEditor] Switching from visual to split mode');
       setEditorMode('split');
+      // Give extra time for the text editor to mount and load text
+      setTimeout(() => {
+        console.log('[QuestEditor] Re-triggering navigation after mode switch');
+        setNavigateToState(null);
+        setTimeout(() => setNavigateToState(stateName), 100);
+      }, 300);
     }
-    // Set the state to navigate to
-    console.log('[QuestEditor] Setting navigateToState to:', stateName);
-    setNavigateToState(stateName);
-    // Clear after a longer delay to allow text editor to process
+    
+    // Clear after allowing text editor to process
     setTimeout(() => {
       console.log('[QuestEditor] Clearing navigateToState');
       setNavigateToState(null);
-    }, 500);
+    }, 1000);
+  };
+
+  const handleNavigateToVisual = (stateName: string) => {
+    console.log('[QuestEditor] handleNavigateToVisual called with:', stateName);
+    console.log('[QuestEditor] Current editorMode:', editorMode);
+    
+    // Switch to split or visual mode if in text-only mode
+    if (editorMode === 'text') {
+      console.log('[QuestEditor] Switching from text to split mode');
+      setEditorMode('split');
+    }
+    
+    // Highlight the state in the visual editor
+    // Note: This would require adding support in QuestFlowDiagram to highlight a specific node
+    // For now, we just ensure the visual editor is visible
+    setHighlightStateInVisual(stateName);
+    setTimeout(() => setHighlightStateInVisual(null), 2000);
   };
 
   const handleLoadTemplate = (templateName: string) => {
@@ -185,21 +212,6 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete }: Quest
         </div>
 
         <button
-          onClick={() => onExport(quest.id)}
-          style={{
-            padding: '6px 16px',
-            backgroundColor: 'var(--accent-primary)',
-            color: 'var(--text-primary)',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '13px'
-          }}
-        >
-          Export
-        </button>
-
-        <button
           onClick={() => {
             if (confirm(`Delete quest "${quest.questName}" (ID: ${quest.id})?`)) {
               onDelete(quest.id);
@@ -222,17 +234,17 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete }: Quest
       {/* Editor Content */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {editorMode === 'text' ? (
-          <QuestTextEditor quest={quest} onSave={handleSave} navigateToState={navigateToState} />
+          <QuestTextEditor quest={quest} onSave={handleSave} navigateToState={navigateToState} onNavigateToVisual={handleNavigateToVisual} theme={theme} />
         ) : editorMode === 'visual' ? (
-          <QuestFlowDiagram quest={quest} onQuestChange={handleSave} onNavigateToState={handleNavigateToState} />
+          <QuestFlowDiagram quest={quest} onQuestChange={handleSave} onNavigateToState={handleNavigateToState} highlightState={highlightStateInVisual} />
         ) : (
           // Split view
           <div style={{ display: 'flex', height: '100%', gap: '1px', backgroundColor: 'var(--border-primary)' }}>
             <div style={{ flex: 1, overflow: 'hidden' }}>
-              <QuestTextEditor quest={quest} onSave={handleSave} navigateToState={navigateToState} />
+              <QuestTextEditor quest={quest} onSave={handleSave} navigateToState={navigateToState} onNavigateToVisual={handleNavigateToVisual} theme={theme} />
             </div>
             <div style={{ flex: 1, overflow: 'hidden' }}>
-              <QuestFlowDiagram quest={quest} onQuestChange={handleSave} onNavigateToState={handleNavigateToState} />
+              <QuestFlowDiagram quest={quest} onQuestChange={handleSave} onNavigateToState={handleNavigateToState} highlightState={highlightStateInVisual} />
             </div>
           </div>
         )}
