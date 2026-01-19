@@ -4,6 +4,7 @@ interface CollapsibleSectionProps {
   title: string;
   children: React.ReactNode;
   defaultCollapsed?: boolean;
+  defaultExpanded?: boolean;
   className?: string;
 }
 
@@ -11,9 +12,10 @@ export default function CollapsibleSection({
   title, 
   children, 
   defaultCollapsed = false,
+  defaultExpanded = false,
   className = ''
 }: CollapsibleSectionProps) {
-  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+  const [isCollapsed, setIsCollapsed] = useState(defaultExpanded ? false : defaultCollapsed);
 
   return (
     <div className={`collapsible-section ${className}`}>

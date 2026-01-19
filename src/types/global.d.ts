@@ -25,6 +25,7 @@ interface ElectronAPI {
   pathExists: (path: string) => Promise<boolean>;
   renameFile: (oldPath: string, newPath: string) => Promise<{ success: boolean; error?: string }>;
   selectFolder: () => Promise<{ success: boolean; path?: string; error?: string }>;
+  selectFile: (options: { filters: Array<{ name: string; extensions: string[] }> }) => Promise<{ success: boolean; path?: string; error?: string }>;
   convertBitmapToPNG: (bitmapData: Uint8Array | number[]) => Promise<{ success: boolean; dataUrl?: string; error?: string }>;
 }
 

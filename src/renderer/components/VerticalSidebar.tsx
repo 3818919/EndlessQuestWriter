@@ -17,6 +17,7 @@ interface VerticalSidebarProps {
   onImportClasses: () => void;
   onImportSkills: () => void;
   onImportInns: () => void;
+  onImportQuest: () => void;
   onExportNpcs: () => void;
   onExportItems: () => void;
   onExportDrops: () => void;
@@ -40,6 +41,7 @@ const VerticalSidebar: React.FC<VerticalSidebarProps> = ({
   onImportClasses,
   onImportSkills,
   onImportInns,
+  onImportQuest,
   onExportNpcs,
   onExportItems,
   onExportDrops,
@@ -76,6 +78,7 @@ const VerticalSidebar: React.FC<VerticalSidebarProps> = ({
         onImportClasses={onImportClasses}
         onImportSkills={onImportSkills}
         onImportInns={onImportInns}
+        onImportQuest={onImportQuest}
         onExportNpcs={onExportNpcs}
         onExportItems={onExportItems}
         onExportDrops={onExportDrops}

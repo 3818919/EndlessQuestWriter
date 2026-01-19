@@ -18,6 +18,7 @@ interface ProjectData {
   npcs?: Record<number, any>;
   classes?: Record<number, any>;
   skills?: Record<number, any>;
+  inns?: any[];
   drops?: Map<number, any[]>;
   quests?: Record<number, QuestData>;
   equipment?: {
@@ -792,8 +793,13 @@ export const useProject = (): UseProjectReturn => {
         throw new Error(`Quest ${questId} not found`);
       }
 
+      const quest = quests[questId];
+      if (!quest || !('questName' in quest)) {
+        throw new Error(`Invalid quest data for questId ${questId}`);
+      }
+
       // Serialize to EQF format
-      const eqfContent = EQFParser.serialize(quests[questId]);
+      const eqfContent = EQFParser.serialize(quest as QuestData);
 
       // Generate filename
       const filename = String(questId).padStart(5, '0') + '.eqf';
@@ -853,10 +859,14 @@ export const useProject = (): UseProjectReturn => {
 
       // Create duplicate
       const original = quests[questId];
+      if (!original || !('questName' in original)) {
+        throw new Error(`Invalid quest data for duplication: ${questId}`);
+      }
+      
       const duplicate: QuestData = {
         ...JSON.parse(JSON.stringify(original)), // Deep clone
         id: newId,
-        questName: `${original.questName} (Copy)`
+        questName: `${(original as QuestData).questName} (Copy)`
       };
 
       quests[newId] = duplicate;

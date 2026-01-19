@@ -299,12 +299,11 @@ const EditorPage: React.FC<EditorPageProps> = ({
 
     try {
       const result = await window.electronAPI.selectFile({
-        title: 'Select Quest File',
         filters: [{ name: 'Quest Files', extensions: ['eqf'] }]
       });
 
-      if (result.success && result.filePath) {
-        const questId = await importQuest(result.filePath);
+      if (result.success && result.path) {
+        const questId = await importQuest(result.path);
         setSelectedQuestId(questId);
       }
     } catch (error) {
