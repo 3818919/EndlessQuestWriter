@@ -54,8 +54,8 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete }: Quest
         alignItems: 'center',
         justifyContent: 'center',
         height: '100%',
-        backgroundColor: '#1e1e1e',
-        color: '#888',
+        backgroundColor: 'var(--bg-primary)',
+        color: 'var(--text-secondary)',
         fontSize: '14px'
       }}>
         Select a quest to edit
@@ -72,15 +72,15 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete }: Quest
       display: 'flex', 
       flexDirection: 'column', 
       height: '100%',
-      backgroundColor: '#1e1e1e'
+      backgroundColor: 'var(--bg-primary)'
     }}>
       {/* Header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         padding: '12px 16px',
-        backgroundColor: '#252525',
-        borderBottom: '1px solid #3a3a3a',
+        backgroundColor: 'var(--bg-secondary)',
+        borderBottom: '1px solid var(--border-primary)',
         gap: '12px'
       }}>
         <div style={{ flex: 1 }}>
@@ -88,13 +88,13 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete }: Quest
             margin: 0, 
             fontSize: '16px', 
             fontWeight: '600',
-            color: '#e0e0e0'
+            color: 'var(--text-primary)'
           }}>
             {quest.questName || `Quest ${quest.id}`}
           </h2>
           <div style={{
             fontSize: '12px',
-            color: '#888',
+            color: 'var(--text-secondary)',
             marginTop: '4px'
           }}>
             Quest ID: {quest.id} | Version: {quest.version} | {quest.states.length} states
@@ -108,9 +108,9 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete }: Quest
             value=""
             style={{
               padding: '6px 12px',
-              backgroundColor: '#2a2a2a',
-              color: 'white',
-              border: '1px solid #3a3a3a',
+              backgroundColor: 'var(--bg-tertiary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-primary)',
               borderRadius: '4px',
               cursor: 'pointer',
               fontSize: '12px',
@@ -130,7 +130,7 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete }: Quest
         <div style={{
           display: 'flex',
           gap: '4px',
-          backgroundColor: '#1a1a1a',
+          backgroundColor: 'var(--bg-tertiary)',
           borderRadius: '4px',
           padding: '2px'
         }}>
@@ -138,8 +138,8 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete }: Quest
             onClick={() => setEditorMode('text')}
             style={{
               padding: '6px 12px',
-              backgroundColor: editorMode === 'text' ? '#0e7490' : 'transparent',
-              color: 'white',
+              backgroundColor: editorMode === 'text' ? 'var(--accent-primary)' : 'transparent',
+              color: 'var(--text-primary)',
               border: 'none',
               borderRadius: '3px',
               cursor: 'pointer',
@@ -154,8 +154,8 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete }: Quest
             onClick={() => setEditorMode('split')}
             style={{
               padding: '6px 12px',
-              backgroundColor: editorMode === 'split' ? '#0e7490' : 'transparent',
-              color: 'white',
+              backgroundColor: editorMode === 'split' ? 'var(--accent-primary)' : 'transparent',
+              color: 'var(--text-primary)',
               border: 'none',
               borderRadius: '3px',
               cursor: 'pointer',
@@ -170,8 +170,8 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete }: Quest
             onClick={() => setEditorMode('visual')}
             style={{
               padding: '6px 12px',
-              backgroundColor: editorMode === 'visual' ? '#0e7490' : 'transparent',
-              color: 'white',
+              backgroundColor: editorMode === 'visual' ? 'var(--accent-primary)' : 'transparent',
+              color: 'var(--text-primary)',
               border: 'none',
               borderRadius: '3px',
               cursor: 'pointer',
@@ -188,15 +188,13 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete }: Quest
           onClick={() => onExport(quest.id)}
           style={{
             padding: '6px 16px',
-            backgroundColor: '#0e639c',
-            color: 'white',
+            backgroundColor: 'var(--accent-primary)',
+            color: 'var(--text-primary)',
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer',
             fontSize: '13px'
           }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1177bb'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#0e639c'}
         >
           Export
         </button>
@@ -209,15 +207,13 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete }: Quest
           }}
           style={{
             padding: '6px 16px',
-            backgroundColor: '#c63838',
-            color: 'white',
+            backgroundColor: 'var(--accent-danger)',
+            color: 'var(--text-primary)',
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer',
             fontSize: '13px'
           }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#d64545'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#c63838'}
         >
           Delete
         </button>
@@ -231,7 +227,7 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete }: Quest
           <QuestFlowDiagram quest={quest} onQuestChange={handleSave} onNavigateToState={handleNavigateToState} />
         ) : (
           // Split view
-          <div style={{ display: 'flex', height: '100%', gap: '1px', backgroundColor: '#3a3a3a' }}>
+          <div style={{ display: 'flex', height: '100%', gap: '1px', backgroundColor: 'var(--border-primary)' }}>
             <div style={{ flex: 1, overflow: 'hidden' }}>
               <QuestTextEditor quest={quest} onSave={handleSave} navigateToState={navigateToState} />
             </div>

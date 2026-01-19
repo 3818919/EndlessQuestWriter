@@ -266,7 +266,7 @@ export default function QuestTextEditor({ quest, onSave, navigateToState }: Ques
       display: 'flex', 
       flexDirection: 'column', 
       height: '100%',
-      backgroundColor: '#1e1e1e'
+      backgroundColor: 'var(--bg-primary)'
     }}>
       {/* Toolbar */}
       <div style={{
@@ -274,27 +274,21 @@ export default function QuestTextEditor({ quest, onSave, navigateToState }: Ques
         alignItems: 'center',
         gap: '8px',
         padding: '8px 12px',
-        backgroundColor: '#252525',
-        borderBottom: '1px solid #3a3a3a'
+        backgroundColor: 'var(--bg-secondary)',
+        borderBottom: '1px solid var(--border-primary)'
       }}>
         <button
           onClick={handleSave}
           disabled={!hasChanges}
           style={{
             padding: '6px 16px',
-            backgroundColor: hasChanges ? '#0e639c' : '#2d2d2d',
-            color: hasChanges ? 'white' : '#888',
+            backgroundColor: hasChanges ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+            color: hasChanges ? 'var(--text-primary)' : 'var(--text-disabled)',
             border: 'none',
             borderRadius: '4px',
             cursor: hasChanges ? 'pointer' : 'not-allowed',
             fontSize: '13px',
             fontWeight: '500'
-          }}
-          onMouseOver={(e) => {
-            if (hasChanges) e.currentTarget.style.backgroundColor = '#1177bb';
-          }}
-          onMouseOut={(e) => {
-            if (hasChanges) e.currentTarget.style.backgroundColor = '#0e639c';
           }}
         >
           Save (Ctrl+S)
@@ -305,18 +299,12 @@ export default function QuestTextEditor({ quest, onSave, navigateToState }: Ques
           disabled={!hasChanges}
           style={{
             padding: '6px 16px',
-            backgroundColor: hasChanges ? '#3a3a3a' : '#2d2d2d',
-            color: hasChanges ? 'white' : '#888',
+            backgroundColor: hasChanges ? 'var(--border-primary)' : 'var(--bg-tertiary)',
+            color: hasChanges ? 'var(--text-primary)' : 'var(--text-disabled)',
             border: 'none',
             borderRadius: '4px',
             cursor: hasChanges ? 'pointer' : 'not-allowed',
             fontSize: '13px'
-          }}
-          onMouseOver={(e) => {
-            if (hasChanges) e.currentTarget.style.backgroundColor = '#4a4a4a';
-          }}
-          onMouseOut={(e) => {
-            if (hasChanges) e.currentTarget.style.backgroundColor = '#3a3a3a';
           }}
         >
           Revert
@@ -325,7 +313,7 @@ export default function QuestTextEditor({ quest, onSave, navigateToState }: Ques
         {hasChanges && (
           <span style={{
             marginLeft: '8px',
-            color: '#e5c07b',
+            color: 'var(--accent-warning)',
             fontSize: '12px'
           }}>
             ● Unsaved changes
@@ -335,14 +323,14 @@ export default function QuestTextEditor({ quest, onSave, navigateToState }: Ques
         {error && (
           <span style={{
             marginLeft: '8px',
-            color: '#f44747',
+            color: 'var(--accent-danger)',
             fontSize: '12px'
           }}>
             ⚠ {error}
           </span>
         )}
 
-        <div style={{ marginLeft: 'auto', color: '#888', fontSize: '12px' }}>
+        <div style={{ marginLeft: 'auto', color: 'var(--text-secondary)', fontSize: '12px' }}>
           Quest ID: {quest.id} | {quest.questName}
         </div>
       </div>

@@ -68,8 +68,6 @@ export default function ItemList({
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [showFilterPopup, setShowFilterPopup] = useState(false);
-  const [eifDragOver, setEifDragOver] = useState(false);
-  const [gfxDragOver, setGfxDragOver] = useState(false);
   const [_scrollToSelected, setScrollToSelected] = useState(false);
   const prevSelectedItemId = React.useRef(selectedItemId);
 
@@ -143,76 +141,6 @@ export default function ItemList({
       }
     }
   }, [items, gfxFolder, preloadGfxBatch]);
-
-  // Drag and drop handlers for EIF
-  const handleEifDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setEifDragOver(true);
-  };
-
-  const handleEifDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setEifDragOver(false);
-  };
-
-  const handleEifDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setEifDragOver(false);
-
-    if (isElectron && window.electronAPI) {
-      const files = Array.from(e.dataTransfer.files);
-      const eifFile = files.find(f => f.name.endsWith('.eif'));
-      if (eifFile && 'path' in eifFile) {
-        onLoadEIFFromPath((eifFile as ElectronFile).path);
-      }
-    } else {
-      const files = Array.from(e.dataTransfer.files);
-      const eifFile = files.find(f => f.name.endsWith('.eif'));
-      if (eifFile) {
-        onLoadFile();
-      }
-    }
-  };
-
-  // Drag and drop handlers for GFX
-  const handleGfxDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setGfxDragOver(true);
-  };
-
-  const handleGfxDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setGfxDragOver(false);
-  };
-
-  const handleGfxDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setGfxDragOver(false);
-
-    if (isElectron && window.electronAPI) {
-      const items = Array.from(e.dataTransfer.items);
-      if (items.length > 0) {
-        const item = items[0];
-        const file = item.getAsFile();
-        if (file && 'path' in file) {
-          const path = (file as ElectronFile).path;
-          const isDir = await window.electronAPI.isDirectory(path);
-          if (isDir) {
-            onSelectGfxFromPath(path);
-          } else {
-            const dirPath = path.substring(0, path.lastIndexOf('/'));
-            onSelectGfxFromPath(dirPath);
-          }
-        }
-      }
-    }
-  };
 
   const listItems: ListItem[] = useMemo(() => {
     return filteredItems.map(item => ({
@@ -303,8 +231,8 @@ export default function ItemList({
         {(currentFile || currentProject) && (
           <div style={{
             padding: '8px',
-            borderTop: '1px solid #3a3a3a',
-            backgroundColor: '#252525'
+            borderTop: '1px solid var(--border-primary)',
+            backgroundColor: 'var(--bg-secondary)'
           }}>
             <button 
               onClick={onAddItem}
@@ -312,20 +240,11 @@ export default function ItemList({
               style={{
                 width: '100%',
                 padding: '8px',
-                backgroundColor: '#0e7490',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: 500,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px'
               }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#0891b2'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#0e7490'}
             >
               <span>+</span>
               {!leftPanelMinimized && <span>New Item</span>}
@@ -333,88 +252,6 @@ export default function ItemList({
           </div>
         )}
       </div>
-
-      {showSettingsModal && (
-        <div className="modal-overlay" onClick={() => setShowSettingsModal(false)}>
-          <div className="modal-content settings-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>File Settings</h2>
-            
-            <div className="settings-drop-zones">
-              <div 
-                className={`settings-drop-zone ${currentFile ? 'has-file' : ''} ${eifDragOver ? 'drag-over' : ''}`}
-                onClick={onLoadFile}
-                onDragOver={handleEifDragOver}
-                onDragLeave={handleEifDragLeave}
-                onDrop={handleEifDrop}
-              >
-                <div className="drop-zone-icon">
-                  <InsertDriveFileIcon />
-                </div>
-                <div className="drop-zone-text">
-                  {currentFile ? (
-                    <>
-                      <div className="drop-zone-title">Item File</div>
-                      <div className="drop-zone-file">{currentFile}</div>
-                      <div className="drop-zone-hint">Click to change</div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="drop-zone-title">Item File (EIF)</div>
-                      <div className="drop-zone-hint">Click or drop .eif file</div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div 
-                className={`settings-drop-zone ${gfxFolder ? 'has-file' : ''} ${gfxDragOver ? 'drag-over' : ''}`}
-                onClick={onSelectGfxFolder}
-                onDragOver={handleGfxDragOver}
-                onDragLeave={handleGfxDragLeave}
-                onDrop={handleGfxDrop}
-              >
-                <div className="drop-zone-icon">
-                  <FolderOpenIcon />
-                </div>
-                <div className="drop-zone-text">
-                  {gfxFolder ? (
-                    <>
-                      <div className="drop-zone-title">Graphics Folder</div>
-                      <div className="drop-zone-file">{gfxFolder}</div>
-                      <div className="drop-zone-hint">Click to change</div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="drop-zone-title">Graphics Folder (GFX)</div>
-                      <div className="drop-zone-hint">Click or drop folder</div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-actions">
-              <button 
-                onClick={() => {
-                  if (confirm('This will clear your file selections and return to the landing page. Continue?')) {
-                    onResetFileSelection();
-                    setShowSettingsModal(false);
-                  }
-                }} 
-                className="btn btn-danger modal-action-btn"
-              >
-                Reset File Selection
-              </button>
-              <button 
-                onClick={() => setShowSettingsModal(false)} 
-                className="btn btn-secondary modal-action-btn"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

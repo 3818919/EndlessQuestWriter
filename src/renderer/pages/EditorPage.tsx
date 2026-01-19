@@ -348,6 +348,8 @@ const EditorPage: React.FC<EditorPageProps> = ({
         isSaveDisabled={false}
         leftPanelMinimized={leftPanelMinimized}
         setLeftPanelMinimized={setLeftPanelMinimized}
+        theme={theme}
+        toggleTheme={toggleTheme}
       />
       
       <div className="main-content">

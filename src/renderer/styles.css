@@ -801,12 +801,12 @@ body {
 }
 
 .btn-primary {
-  background: #0e639c;
+  background: var(--accent-primary);
   color: var(--text-white);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #1177bb;
+  background: var(--accent-hover);
 }
 
 .btn-success {
@@ -1084,11 +1084,11 @@ body {
 }
 
 .btn-primary {
-  background: #0e639c;
+  background: var(--accent-primary);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #1177bb;
+  background: var(--accent-hover);
 }
 
 .btn-success {

@@ -42,24 +42,24 @@ const StateNode = ({ data }: { data: any }) => {
     <div style={{
       padding: '12px',
       borderRadius: '8px',
-      border: '2px solid #0e7490',
-      backgroundColor: '#1e293b',
-      color: 'white',
+      border: '2px solid var(--accent-primary)',
+      backgroundColor: 'var(--bg-secondary)',
+      color: 'var(--text-primary)',
       minWidth: '220px',
       maxWidth: '320px',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+      boxShadow: '0 4px 6px var(--shadow)',
       position: 'relative'
     }}>
       {/* Connection handles */}
-      <Handle type="target" position={Position.Top} style={{ background: '#0e7490' }} />
-      <Handle type="source" position={Position.Bottom} style={{ background: '#0e7490' }} />
+      <Handle type="target" position={Position.Top} style={{ background: 'var(--accent-primary)' }} />
+      <Handle type="source" position={Position.Bottom} style={{ background: 'var(--accent-primary)' }} />
       
       {/* State Name with Open Icon */}
       <div style={{ 
         fontWeight: 600, 
         fontSize: '14px', 
         marginBottom: '4px', 
-        color: '#38bdf8',
+        color: 'var(--accent-primary)',
         display: 'flex',
         alignItems: 'center',
         gap: '6px'
@@ -70,7 +70,7 @@ const StateNode = ({ data }: { data: any }) => {
           style={{
             background: 'none',
             border: 'none',
-            color: '#94a3b8',
+            color: 'var(--text-secondary)',
             cursor: 'pointer',
             padding: '2px',
             display: 'flex',
@@ -78,8 +78,8 @@ const StateNode = ({ data }: { data: any }) => {
             fontSize: '12px',
             transition: 'color 0.2s'
           }}
-          onMouseOver={(e) => e.currentTarget.style.color = '#38bdf8'}
-          onMouseOut={(e) => e.currentTarget.style.color = '#94a3b8'}
+          onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'}
+          onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
           title="Open in text editor"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -92,7 +92,7 @@ const StateNode = ({ data }: { data: any }) => {
       
       {/* Description */}
       {data.description && (
-        <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '8px', fontStyle: 'italic' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', fontStyle: 'italic' }}>
           {data.description}
         </div>
       )}
@@ -100,19 +100,19 @@ const StateNode = ({ data }: { data: any }) => {
       {/* Actions */}
       {data.actions && data.actions.length > 0 && (
         <div style={{ marginTop: '8px', fontSize: '11px' }}>
-          <div style={{ color: '#22d3ee', fontWeight: 600, marginBottom: '4px' }}>Actions:</div>
+          <div style={{ color: 'var(--accent-success)', fontWeight: 600, marginBottom: '4px' }}>Actions:</div>
           <div style={{ 
             maxHeight: '120px', 
             overflowY: 'auto', 
             paddingLeft: '8px',
-            borderLeft: '2px solid #334155'
+            borderLeft: '2px solid var(--border-primary)'
           }}>
             {data.actions
               .filter((action: any) => action.type !== 'End') // Filter out End() actions
               .map((action: any, idx: number) => (
                 <div key={idx} style={{ 
                   marginBottom: '3px', 
-                  color: '#cbd5e1',
+                  color: 'var(--text-tertiary)',
                   fontSize: '10px',
                   wordBreak: 'break-word'
                 }}>
@@ -126,17 +126,17 @@ const StateNode = ({ data }: { data: any }) => {
       {/* Rules */}
       {data.rules && data.rules.length > 0 && (
         <div style={{ marginTop: '8px', fontSize: '11px' }}>
-          <div style={{ color: '#a78bfa', fontWeight: 600, marginBottom: '4px' }}>Rules:</div>
+          <div style={{ color: 'var(--accent-warning)', fontWeight: 600, marginBottom: '4px' }}>Rules:</div>
           <div style={{ 
             paddingLeft: '8px',
-            borderLeft: '2px solid #334155'
+            borderLeft: '2px solid var(--border-primary)'
           }}>
             {data.rules.map((rule: any, idx: number) => (
               <div 
                 key={idx} 
                 style={{ 
                   marginBottom: '3px', 
-                  color: '#cbd5e1',
+                  color: 'var(--text-tertiary)',
                   fontSize: '10px',
                   wordBreak: 'break-word',
                   display: 'flex',
@@ -145,7 +145,7 @@ const StateNode = ({ data }: { data: any }) => {
                 }}
               >
                 <span>{rule.display}</span>
-                <span style={{ color: '#a78bfa', fontSize: '12px' }}>→ {rule.gotoState}</span>
+                <span style={{ color: 'var(--accent-warning)', fontSize: '12px' }}>→ {rule.gotoState}</span>
               </div>
             ))}
           </div>
@@ -161,20 +161,20 @@ const EndNode = () => {
     <div style={{
       padding: '16px 24px',
       borderRadius: '50%',
-      border: '3px solid #ef4444',
-      backgroundColor: '#7f1d1d',
-      color: 'white',
+      border: '3px solid var(--accent-danger)',
+      backgroundColor: 'var(--bg-secondary)',
+      color: 'var(--accent-danger)',
       minWidth: '100px',
       minHeight: '100px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.5)',
+      boxShadow: '0 4px 6px var(--shadow)',
       position: 'relative',
       fontWeight: 700,
       fontSize: '16px'
     }}>
-      <Handle type="target" position={Position.Top} style={{ background: '#ef4444' }} />
+      <Handle type="target" position={Position.Top} style={{ background: 'var(--accent-danger)' }} />
       END
     </div>
   );
@@ -305,22 +305,22 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
             animated: !isConditional,
             label: rule.type,
             style: { 
-              stroke: isConditional ? '#a78bfa' : '#22d3ee', 
+              stroke: isConditional ? 'var(--accent-warning)' : 'var(--accent-success)', 
               strokeWidth: 2,
               strokeDasharray: isConditional ? '5,5' : '0'
             },
             labelStyle: {
-              fill: '#e2e8f0',
+              fill: 'var(--text-primary)',
               fontSize: 10,
               fontWeight: 500
             },
             labelBgStyle: {
-              fill: '#1e293b',
+              fill: 'var(--bg-secondary)',
               fillOpacity: 0.8
             },
             markerEnd: {
               type: MarkerType.ArrowClosed,
-              color: isConditional ? '#a78bfa' : '#22d3ee'
+              color: isConditional ? 'var(--accent-warning)' : 'var(--accent-success)'
             }
           });
         }
@@ -337,19 +337,19 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
               target: targetState,
               animated: action.type === 'Goto',
               label: action.type,
-              style: { stroke: '#0e7490', strokeWidth: 2 },
+              style: { stroke: 'var(--accent-primary)', strokeWidth: 2 },
               labelStyle: {
-                fill: '#e2e8f0',
+                fill: 'var(--text-primary)',
                 fontSize: 10,
                 fontWeight: 500
               },
               labelBgStyle: {
-                fill: '#1e293b',
+                fill: 'var(--bg-secondary)',
                 fillOpacity: 0.8
               },
               markerEnd: {
                 type: MarkerType.ArrowClosed,
-                color: '#0e7490'
+                color: 'var(--accent-primary)'
               }
             });
           }
@@ -361,19 +361,19 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
             target: '__END__',
             animated: true,
             label: 'End',
-            style: { stroke: '#ef4444', strokeWidth: 3 },
+            style: { stroke: 'var(--accent-danger)', strokeWidth: 3 },
             labelStyle: {
-              fill: '#e2e8f0',
+              fill: 'var(--text-primary)',
               fontSize: 10,
               fontWeight: 600
             },
             labelBgStyle: {
-              fill: '#1e293b',
+              fill: 'var(--bg-secondary)',
               fillOpacity: 0.8
             },
             markerEnd: {
               type: MarkerType.ArrowClosed,
-              color: '#ef4444'
+              color: 'var(--accent-danger)'
             }
           });
         }
@@ -454,7 +454,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
     if (!viewport) return;
 
     toPng(viewport, {
-      backgroundColor: '#1e293b',
+      backgroundColor: 'var(--bg-secondary)',
       width: width + padding * 2,
       height: height + padding * 2,
       style: {
@@ -485,20 +485,18 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
           onClick={handleExportPNG}
           style={{
             padding: '8px 16px',
-            backgroundColor: '#059669',
-            color: 'white',
+            backgroundColor: 'var(--accent-success)',
+            color: 'var(--text-primary)',
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer',
             fontSize: '13px',
             fontWeight: '500',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+            boxShadow: 'var(--shadow)',
             display: 'flex',
             alignItems: 'center',
             gap: '6px'
           }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#059669'}
         >
           📷 Export PNG
         </button>
@@ -506,20 +504,18 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
           onClick={handleAddState}
           style={{
             padding: '8px 16px',
-            backgroundColor: '#0e7490',
-            color: 'white',
+            backgroundColor: 'var(--accent-primary)',
+            color: 'var(--text-primary)',
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer',
             fontSize: '13px',
             fontWeight: '500',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+            boxShadow: 'var(--shadow)',
             display: 'flex',
             alignItems: 'center',
             gap: '6px'
           }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#0e8aaa'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#0e7490'}
         >
           <span style={{ fontSize: '16px' }}>+</span>
           Add State
@@ -542,7 +538,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
           animated: false
         }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={12} size={1} color="#334155" />
+        <Background variant={BackgroundVariant.Dots} gap={12} size={1} color="var(--border-secondary)" />
         <Controls />
       </ReactFlow>
     </div>

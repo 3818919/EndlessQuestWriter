@@ -1,8 +1,10 @@
 import React from 'react';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
-import HomeIcon from '@mui/icons-material/Home';
+import ReplyIcon from '@mui/icons-material/Reply';
 import HouseIcon from '@mui/icons-material/House';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
 import FileMenu from './FileMenu';
 import { CrossedSwordsIcon, SkullCrossedBonesIcon, SpellBookIcon } from './icons';
 import QuestIcon from './icons/QuestIcon';
@@ -29,6 +31,8 @@ interface VerticalSidebarProps {
   isSaveDisabled: boolean;
   leftPanelMinimized: boolean;
   setLeftPanelMinimized: (minimized: boolean) => void;
+  theme: 'dark' | 'light';
+  toggleTheme: () => void;
 }
 
 const VerticalSidebar: React.FC<VerticalSidebarProps> = ({
@@ -52,7 +56,9 @@ const VerticalSidebar: React.FC<VerticalSidebarProps> = ({
   onReturnToProjects,
   isSaveDisabled,
   leftPanelMinimized,
-  setLeftPanelMinimized
+  setLeftPanelMinimized,
+  theme,
+  toggleTheme
 }) => {
   const handleTabClick = (tab: string) => {
     if (tab === activeTab) {
@@ -132,10 +138,17 @@ const VerticalSidebar: React.FC<VerticalSidebarProps> = ({
       <div className="sidebar-spacer"></div>
       <button
         className="left-sidebar-button"
+        onClick={toggleTheme}
+        title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+      >
+        {theme === 'dark' ? <DarkModeIcon /> : <LightModeIcon />}
+      </button>
+      <button
+        className="left-sidebar-button"
         onClick={onReturnToProjects}
         title="Return to Projects"
       >
-        <HomeIcon />
+        <ReplyIcon />
       </button>
       <button
         className="left-sidebar-button"

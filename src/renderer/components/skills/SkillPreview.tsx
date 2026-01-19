@@ -234,33 +234,6 @@ const SkillPreview: React.FC<SkillPreviewProps> = ({ skill, loadGfx, gfxFolder }
           </div>
         )}
       </div>
-
-      <div className="skill-info">
-        <div className="info-row">
-          <span className="label">Skill ID:</span>
-          <span className="value">{skill.id}</span>
-        </div>
-        <div className="info-row">
-          <span className="label">Graphic ID:</span>
-          <span className="value">{skill.graphicId}</span>
-        </div>
-        <div className="info-row">
-          <span className="label">Icon ID:</span>
-          <span className="value">{skill.iconId}</span>
-        </div>
-        <div className="info-row">
-          <span className="label">TP Cost:</span>
-          <span className="value">{skill.tpCost}</span>
-        </div>
-        <div className="info-row">
-          <span className="label">SP Cost:</span>
-          <span className="value">{skill.spCost}</span>
-        </div>
-        <div className="info-row">
-          <span className="label">Cast Time:</span>
-          <span className="value">{skill.castTime}</span>
-        </div>
-      </div>
     </div>
   );
 };
