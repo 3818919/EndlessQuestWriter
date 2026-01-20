@@ -71,8 +71,8 @@ export const useProject = (): UseProjectReturn => {
   useEffect(() => {
     const initializeOaktreeDir = async () => {
       if (isElectron && window.electronAPI) {
-        const cwd = await window.electronAPI.getCwd();
-        const folder = `${cwd}/.oaktree`;
+        const homeDir = await window.electronAPI.getHomeDir();
+        const folder = `${homeDir}/.oaktree`;
         setOaktreeDir(folder);
         await window.electronAPI.ensureDir(folder);
       }
