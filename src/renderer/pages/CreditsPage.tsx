@@ -140,35 +140,72 @@ const CreditsPage: React.FC<CreditsPageProps> = ({ theme }) => {
               focus specifically on quest editing with enhanced visual tools and external configuration support.
             </p>
             
-            <button
-              onClick={() => openExternalLink('https://vexx.info/')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px 20px',
-                backgroundColor: 'var(--bg-tertiary)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border-primary)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 500,
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
-                e.currentTarget.style.borderColor = 'var(--accent-primary)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-                e.currentTarget.style.borderColor = 'var(--border-primary)';
-              }}
-            >
-              <LanguageIcon style={{ fontSize: '20px' }} />
-              Visit Vexx's Website
-              <OpenInNewIcon style={{ fontSize: '16px', opacity: 0.7 }} />
-            </button>
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              flexWrap: 'wrap',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={() => openExternalLink('https://vexx.info/')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 20px',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+                  e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                  e.currentTarget.style.borderColor = 'var(--border-primary)';
+                }}
+              >
+                <LanguageIcon style={{ fontSize: '20px' }} />
+                Visit Vexx's Website
+                <OpenInNewIcon style={{ fontSize: '16px', opacity: 0.7 }} />
+              </button>
+              
+              <button
+                onClick={() => openExternalLink('https://github.com/3818919/EndlessQuestWriter')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 20px',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+                  e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                  e.currentTarget.style.borderColor = 'var(--border-primary)';
+                }}
+              >
+                <GitHubIcon style={{ fontSize: '20px' }} />
+                View Project on GitHub
+                <OpenInNewIcon style={{ fontSize: '16px', opacity: 0.7 }} />
+              </button>
+            </div>
           </div>
 
           {/* Additional Credits */}

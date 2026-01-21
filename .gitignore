@@ -51,3 +51,6 @@ ehthumbs.db
 # Package manager locks (optional - uncomment if you want to ignore)
 # package-lock.json
 # yarn.lock
+
+# Development documentation (internal use only)
+DEVELOPMENT_DOCS.md

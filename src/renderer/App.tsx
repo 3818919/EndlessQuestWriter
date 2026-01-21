@@ -3,6 +3,7 @@ import LandingScreen from './pages/LandingScreen';
 import EditorPage from './pages/EditorPage';
 import { useProject } from './hooks/useProject';
 import { QuestData, EQFParser } from '../eqf-parser';
+import UpdateNotification from './components/UpdateNotification';
 
 // Check if running in Electron
 const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;

@@ -12,7 +12,8 @@
   "include": [
     "src/main.ts",
     "src/preload.ts",
-    "src/eqf-parser.ts"
+    "src/eqf-parser.ts",
+    "src/updater.ts"
   ],
   "exclude": [
     "node_modules",

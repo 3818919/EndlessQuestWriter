@@ -40,5 +40,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // File listing
   listFiles: (dirPath, extension) => ipcRenderer.invoke('file:listFiles', dirPath, extension),
   readTextBatch: (filePaths) => ipcRenderer.invoke('file:readTextBatch', filePaths),
-  deleteFile: (filePath) => ipcRenderer.invoke('file:deleteFile', filePath)
+  deleteFile: (filePath) => ipcRenderer.invoke('file:deleteFile', filePath),
+  
+  // App information
+  getVersion: () => ipcRenderer.invoke('app:getVersion'),
+  
+  // Update system
+  checkForUpdates: () => ipcRenderer.invoke('updater:checkForUpdates'),
+  downloadAndInstall: () => ipcRenderer.invoke('updater:downloadAndInstall'),
+  onUpdateStatus: (callback) => {
+    ipcRenderer.on('update-status', (event, status, progress) => {
+      callback(status, progress);
+    });
+  }
 });

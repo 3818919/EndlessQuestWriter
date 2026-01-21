@@ -51,6 +51,7 @@
     "@xyflow/react": "^12.10.0",
     "dagre": "^0.8.5",
     "electron-store": "^8.1.0",
+    "electron-updater": "^6.1.7",
     "html-to-image": "^1.11.13",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
@@ -75,13 +76,37 @@
         "filter": ["**/*"]
       }
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "3818919",
+      "repo": "EndlessQuestWriter"
+    },
     "mac": {
       "target": "dmg",
       "icon": "assets/icon.icns"
     },
     "win": {
-      "target": "nsis",
+      "target": {
+        "target": "nsis",
+        "arch": ["x64", "ia32"]
+      },
       "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": false,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Endless Quest Writer",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "menuCategory": "Development",
+      "artifactName": "${productName} Setup ${version}.${ext}",
+      "include": "build/installer.nsh"
     },
     "linux": {
       "target": "AppImage",

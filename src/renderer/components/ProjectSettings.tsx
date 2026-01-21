@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import FolderIcon from '@mui/icons-material/Folder';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
+import UpdateIcon from '@mui/icons-material/SystemUpdate';
+import UpdateNotification from './UpdateNotification';
 
 interface ProjectSettingsProps {
   projectName: string;
@@ -95,6 +97,16 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
           {nameError && <div className="form-error" style={{ color: '#e74c3c', fontSize: '12px', marginTop: '4px' }}>{nameError}</div>}
           <div className="form-help" style={{ marginTop: '4px' }}>
             The name of your project. This will be displayed in the project list.
+          </div>
+        </div>
+
+        <div className="form-group" style={{ marginTop: '20px' }}>
+          <label>Updates</label>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <UpdateNotification />
+          </div>
+          <div className="form-help" style={{ marginTop: '4px' }}>
+            Check for application updates from GitHub releases.
           </div>
         </div>
 

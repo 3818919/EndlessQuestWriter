@@ -43,6 +43,24 @@ interface ElectronAPI {
   listFiles: (dirPath: string, extension?: string) => Promise<{ success: boolean; files: string[]; error?: string }>;
   readTextBatch: (filePaths: string[]) => Promise<Record<string, { success: boolean; data?: string; error?: string }>>;
   deleteFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+  
+  // App information
+  getVersion: () => Promise<string>;
+  
+  // Update system
+  checkForUpdates: () => Promise<{ 
+    success: boolean; 
+    hasUpdate?: boolean; 
+    updateInfo?: {
+      version: string;
+      releaseDate: string;
+      releaseName?: string;
+      releaseNotes?: string;
+    };
+    error?: string;
+  }>;
+  downloadAndInstall: () => Promise<{ success: boolean; error?: string }>;
+  onUpdateStatus: (callback: (status: string, progress: number) => void) => void;
 }
 
 interface Window {

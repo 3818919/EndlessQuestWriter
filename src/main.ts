@@ -2,11 +2,215 @@
 const { app, BrowserWindow, ipcMain, dialog, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
+const { appUpdater } = require('./updater');
 
 // Set app name before ready event
 app.setName('Endless Quest Writer');
 
 let mainWindow;
+let splashWindow;
+
+function createSplashWindow() {
+  // Determine icon path based on dev/prod mode and platform
+  const isDev = process.argv.includes('--dev');
+  let iconPath;
+  
+  if (process.platform === 'darwin') {
+    // Use ICNS for macOS
+    iconPath = isDev 
+      ? path.join(process.cwd(), 'assets', 'icon.icns')
+      : path.join(__dirname, '..', 'assets', 'icon.icns');
+  } else if (process.platform === 'win32') {
+    // Use ICO for Windows
+    iconPath = isDev 
+      ? path.join(process.cwd(), 'assets', 'icon.ico')
+      : path.join(__dirname, '..', 'assets', 'icon.ico');
+  } else {
+    // Use PNG for Linux
+    iconPath = isDev 
+      ? path.join(process.cwd(), 'assets', 'icon.png')
+      : path.join(__dirname, '..', 'assets', 'icon.png');
+  }
+
+  const icon = nativeImage.createFromPath(iconPath);
+
+  splashWindow = new BrowserWindow({
+    width: 600,
+    height: 400,
+    frame: false,
+    alwaysOnTop: true,
+    transparent: true,
+    resizable: false,
+    icon: icon,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  // Load splash screen HTML
+  const splashHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Endless Quest Writer</title>
+      <style>
+        :root {
+          --bg-primary: #1e1e1e;
+          --bg-secondary: #252526;
+          --bg-tertiary: #2d2d30;
+          --text-primary: #cccccc;
+          --text-secondary: #9d9d9d;
+          --text-tertiary: #6f6f6f;
+          --accent-primary: #007acc;
+          --accent-success: #4caf50;
+          --accent-warning: #ff9800;
+          --accent-danger: #f44336;
+          --border-primary: #3e3e42;
+          --border-secondary: #464647;
+          --shadow: rgba(0, 0, 0, 0.2);
+        }
+        
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          background: var(--bg-primary);
+          color: var(--text-primary);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          overflow: hidden;
+        }
+        
+        .splash-container {
+          text-align: center;
+          padding: 40px;
+        }
+        
+        .app-icon {
+          width: 80px;
+          height: 80px;
+          margin: 0 auto 24px;
+          background-image: url('icon.png');
+          background-size: contain;
+          background-repeat: no-repeat;
+          background-position: center;
+        }
+        
+        .app-title {
+          font-size: 24px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: var(--text-primary);
+        }
+        
+        .app-subtitle {
+          font-size: 14px;
+          color: var(--text-secondary);
+          margin-bottom: 40px;
+        }
+        
+        .status-text {
+          font-size: 13px;
+          color: var(--text-secondary);
+          margin-bottom: 16px;
+          min-height: 20px;
+        }
+        
+        .progress-container {
+          width: 300px;
+          margin: 0 auto 16px;
+        }
+        
+        .progress-bar {
+          width: 100%;
+          height: 6px;
+          background: var(--bg-tertiary);
+          border-radius: 3px;
+          overflow: hidden;
+        }
+        
+        .progress-fill {
+          height: 100%;
+          background: var(--accent-primary);
+          border-radius: 3px;
+          transition: width 0.3s ease;
+          width: 0%;
+        }
+        
+        .progress-text {
+          font-size: 11px;
+          color: var(--text-tertiary);
+          margin-top: 8px;
+        }
+        
+        .spinner {
+          width: 24px;
+          height: 24px;
+          border: 2px solid var(--bg-tertiary);
+          border-top: 2px solid var(--accent-primary);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin: 0 auto 24px;
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        .version-text {
+          font-size: 11px;
+          color: var(--text-tertiary);
+          margin-top: 24px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="splash-container">
+        <div class="app-icon"></div>
+        <div class="app-title">Endless Quest Writer</div>
+        <div class="app-subtitle">Visual Editor for Endless Online Quest Files</div>
+        
+        <div class="status-text" id="status">Initializing...</div>
+        
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <div class="progress-text" id="progress-text">0%</div>
+        </div>
+        
+        <div class="version-text">Version 1.0.0</div>
+      </div>
+      
+      <script>
+        // Listen for updates from main process
+        window.electronAPI.onUpdateStatus((status, progress) => {
+          document.getElementById('status').textContent = status;
+          if (progress >= 0) {
+            document.getElementById('progress-fill').style.width = progress + '%';
+            document.getElementById('progress-text').textContent = Math.round(progress) + '%';
+          }
+        });
+      </script>
+    </body>
+    </html>
+  `;
+
+  splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(splashHtml)}`);
+
+  if (isDev) {
+    splashWindow.webContents.openDevTools();
+  }
+
+  return splashWindow;
+}
 
 function createWindow() {
   // Determine icon path based on dev/prod mode and platform
@@ -37,6 +241,7 @@ function createWindow() {
     height: 900,
     title: 'Endless Quest Writer',
     icon: icon,
+    show: false, // Don't show until ready
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -76,9 +281,93 @@ function createWindow() {
   if (isDev) {
     mainWindow.webContents.openDevTools();
   }
+
+  // Show main window when ready
+  mainWindow.once('ready-to-show', () => {
+    if (splashWindow) {
+      splashWindow.close();
+      splashWindow = null;
+    }
+    mainWindow.show();
+  });
 }
 
-app.whenReady().then(() => {
+// Function to update splash screen status
+function updateSplashStatus(status, progress = -1) {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.webContents.send('update-status', status, progress);
+  }
+}
+
+// Initialize app with update check
+async function initializeApp() {
+  const isDev = process.argv.includes('--dev');
+  
+  try {
+    updateSplashStatus('Checking for updates...', 10);
+    
+    // Skip update check in development mode
+    if (isDev) {
+      updateSplashStatus('Starting application...', 90);
+      setTimeout(() => {
+        updateSplashStatus('Ready!', 100);
+        setTimeout(() => {
+          createWindow();
+        }, 500);
+      }, 1000);
+      return;
+    }
+
+    // Check for updates
+    const updateResult = await appUpdater.checkForUpdatesOnStartup();
+    
+    if (updateResult.hasUpdate && updateResult.updateInfo) {
+      updateSplashStatus('Update available! Downloading...', 30);
+      
+      // Set up progress listener
+      appUpdater.on('download-progress', (progressObj) => {
+        const progress = 30 + (progressObj.percent * 0.6); // 30% to 90%
+        updateSplashStatus(`Downloading update... ${Math.round(progressObj.percent)}%`, progress);
+      });
+      
+      // Download and install update
+      try {
+        await appUpdater.downloadAndInstallUpdate(updateResult.updateInfo);
+        updateSplashStatus('Update downloaded! Restarting...', 100);
+        
+        // Wait a moment then restart
+        setTimeout(() => {
+          appUpdater.quitAndInstall();
+        }, 1500);
+        
+      } catch (error) {
+        console.error('Update download failed:', error);
+        updateSplashStatus('Update failed. Starting application...', 90);
+        setTimeout(() => {
+          createWindow();
+        }, 1000);
+      }
+    } else {
+      // No update available, continue with normal startup
+      updateSplashStatus('Starting application...', 90);
+      setTimeout(() => {
+        updateSplashStatus('Ready!', 100);
+        setTimeout(() => {
+          createWindow();
+        }, 500);
+      }, 1000);
+    }
+    
+  } catch (error) {
+    console.error('Update check failed:', error);
+    updateSplashStatus('Starting application...', 90);
+    setTimeout(() => {
+      createWindow();
+    }, 1000);
+  }
+}
+
+app.whenReady().then(async () => {
   // Set dock icon for macOS
   if (process.platform === 'darwin') {
     const isDev = process.argv.includes('--dev');
@@ -91,7 +380,14 @@ app.whenReady().then(() => {
     }
   }
 
-  createWindow();
+  // Show splash screen first
+  createSplashWindow();
+  
+  // Set up updater
+  appUpdater.setMainWindow(splashWindow);
+  
+  // Start update check and app initialization
+  await initializeApp();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -478,5 +774,30 @@ ipcMain.handle('config:initialize', async () => {
     return { success: true, configDir: userConfigDir };
   } catch (error) {
     return { success: false, error: error.message, configDir: userConfigDir };
+  }
+});
+
+// Get app version
+ipcMain.handle('app:getVersion', () => {
+  return app.getVersion();
+});
+
+// Check for updates manually
+ipcMain.handle('updater:checkForUpdates', async () => {
+  try {
+    const result = await appUpdater.checkForUpdatesOnStartup();
+    return { success: true, ...result };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Download and install update
+ipcMain.handle('updater:downloadAndInstall', async () => {
+  try {
+    // This will be handled by the updater events
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
   }
 });
