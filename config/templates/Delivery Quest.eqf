@@ -1,0 +1,56 @@
+Main
+{
+	questname	"New Delivery Quest"
+	version		1
+}
+
+State Begin
+{
+	desc	"Talk to NPC #1"
+	action	AddNpcText(1, "I need you to deliver this package to someone.");
+	action	AddNpcText(1, "Can you take it to NPC #2 for me?");
+	action	AddNpcInput(1, 1, "Yes, I can deliver it.");
+	action	AddNpcInput(1, 2, "No thanks.");
+	rule	InputNpc(1) goto GotPackage
+	rule	InputNpc(2) goto Begin
+}
+
+State GotPackage
+{
+	desc	"Deliver package to NPC #2"
+	action	GiveItem(200, 1);
+	action	AddNpcText(1, "Thank you! Please deliver this to NPC #2.");
+	rule	TalkedToNpc(1) goto DeliverPackage
+}
+
+State DeliverPackage
+{
+	desc	"Talk to NPC #2"
+	action	AddNpcText(2, "Oh, you have a delivery for me?");
+	action	AddNpcInput(2, 1, "Yes, here it is.");
+	rule	InputNpc(1) goto ReturnToSender
+	rule	LostItems(200, 1) goto Begin
+}
+
+State ReturnToSender
+{
+	desc	"Return to NPC #1"
+	action	RemoveItem(200, 1);
+	action	AddNpcText(2, "Thank you! Please tell the sender I received it.");
+	rule	TalkedToNpc(2) goto CompleteDelivery
+}
+
+State CompleteDelivery
+{
+	desc	"Talk to NPC #1"
+	action	AddNpcText(1, "Excellent work! Here is your reward.");
+	rule	TalkedToNpc(1) goto Reward
+}
+
+State Reward
+{
+	desc	""
+	action	GiveExp(500);
+	action	GiveItem(1, 250);
+	action	End();
+}

@@ -1,7 +1,7 @@
 // Monaco Editor Language Definition for EQF (EO Quest Files)
 // Based on cirras.eoplus VSCode extension
 
-import { ACTION_METADATA, RULE_METADATA } from '../../eqf-parser';
+import { ConfigData } from '../services/configService';
 
 export const EQF_LANGUAGE_ID = 'eqf';
 
@@ -25,84 +25,143 @@ export const eqfLanguageConfig = {
   ],
 };
 
-export const eqfLanguageTokens = {
-  keywords: [
-    'Main', 'State', 'random', 'action', 'rule', 'goto', 'desc',
-    'questname', 'version', 'hidden', 'hidden_end', 'disabled',
-    'minlevel', 'maxlevel', 'needadmin', 'adminreq', 'needclass',
-    'classreq', 'needquest', 'questreq', 'startnpc', 'coord', 'item'
-  ],
-  
-  actions: Object.keys(ACTION_METADATA),
-  
-  rules: Object.keys(RULE_METADATA),
-  
-  operators: [',', ';'],
-  
-  // Stat keywords
-  stats: [
-    'accuracy', 'agi', 'armor', 'cha', 'con', 'base_agi', 'base_cha', 'base_con',
-    'base_int', 'base_str', 'base_wis', 'evade', 'exp', 'goldbank', 'hp', 'int',
-    'level', 'mapid', 'maxhp', 'maxtp', 'maxsp', 'maxdam', 'maxweight', 'mindam',
-    'skillpoints', 'statpoints', 'str', 'tp', 'weight', 'wis', 'x', 'y'
-  ],
+// Default actions/rules if config not loaded
+const DEFAULT_ACTIONS = [
+  'AddNpcText', 'AddNpcInput', 'AddNpcChat', 'AddNpcPM', 'GiveItem', 'RemoveItem',
+  'GiveExp', 'GiveBankItem', 'RemoveBankItem', 'SetClass', 'SetRace', 'SetState',
+  'ShowHint', 'PlaySound', 'PlayEffect', 'PlayMusic', 'Reset', 'End', 'SetCoord',
+  'SetMap', 'Quake', 'QuakeWorld', 'SetHome', 'SetTitle', 'GiveKarma', 'RemoveKarma',
+  'AddKillNpc', 'RemoveKillNpc', 'ResetKillNpc', 'StartQuest', 'ResetQuest'
+];
 
-  tokenizer: {
-    root: [
-      // Comments
-      [/\/\/.*$/, 'comment'],
-      
-      // Keywords (case-insensitive)
-      [/\b(?:Main|State|random)\b/i, 'keyword.control'],
-      [/\b(?:action|rule|goto|desc|coord|item)\b/i, 'keyword'],
-      [/\b(?:questname|version|hidden|hidden_end|disabled|minlevel|maxlevel|needadmin|adminreq|needclass|classreq|needquest|questreq|startnpc)\b/i, 'keyword.declaration'],
-      
-      // Actions - match function-like syntax
-      [/\b[A-Z][a-zA-Z]*(?=\s*\()/, {
-        cases: {
-          '@actions': 'support.function.action',
-          '@rules': 'support.function.rule',
-          '@default': 'identifier'
-        }
-      }],
-      
-      // Stats
-      [/\b(?:accuracy|agi|armor|cha|con|base_agi|base_cha|base_con|base_int|base_str|base_wis|evade|exp|goldbank|hp|int|level|mapid|maxhp|maxtp|maxsp|maxdam|maxweight|mindam|skillpoints|statpoints|str|tp|weight|wis|x|y)\b/i, 'variable.language'],
-      
-      // Strings
-      [/"([^"\\]|\\.)*$/, 'string.invalid'],
-      [/"/, 'string', '@string'],
-      
-      // Numbers
-      [/\b\d+\.?\d*\b/, 'number'],
-      
-      // Operators
-      [/[,;]/, 'delimiter'],
-      
-      // Brackets
-      [/[{}()]/, '@brackets'],
-      
-      // Identifiers (state names, random names, etc.)
-      [/[a-zA-Z_]\w*/, 'identifier'],
+const DEFAULT_RULES = [
+  'Always', 'TalkedToNpc', 'InputNpc', 'KilledNpcs', 'KilledPlayers', 'GotItems',
+  'LostItems', 'EnterCoord', 'LeaveCoord', 'EnterMap', 'LeaveMap', 'EnterArea',
+  'LeaveArea', 'IsClass', 'IsRace', 'IsGender', 'IsNamed', 'CitizenOf', 'GotSpell',
+  'LostSpell', 'UsedItem', 'UsedSpell', 'IsWearing', 'NotWearing', 'Unequipped',
+  'Stepped', 'Die', 'TimeElapsed', 'WaitMinutes', 'WaitSeconds', 'FinishedQuest',
+  'Disconnected'
+];
+
+function createTokensProvider(actions: string[], rules: string[]) {
+  return {
+    keywords: [
+      'Main', 'State', 'random', 'action', 'rule', 'goto', 'desc',
+      'questname', 'version', 'hidden', 'hidden_end', 'disabled',
+      'minlevel', 'maxlevel', 'needadmin', 'adminreq', 'needclass',
+      'classreq', 'needquest', 'questreq', 'startnpc', 'coord', 'item'
     ],
     
-    string: [
-      [/[^\\"]+/, 'string'],
-      [/\\./, 'string.escape'],
-      [/"/, 'string', '@pop']
+    actions: actions,
+    
+    rules: rules,
+    
+    operators: [',', ';'],
+    
+    // Stat keywords
+    stats: [
+      'accuracy', 'agi', 'armor', 'cha', 'con', 'base_agi', 'base_cha', 'base_con',
+      'base_int', 'base_str', 'base_wis', 'evade', 'exp', 'goldbank', 'hp', 'int',
+      'level', 'mapid', 'maxhp', 'maxtp', 'maxsp', 'maxdam', 'maxweight', 'mindam',
+      'skillpoints', 'statpoints', 'str', 'tp', 'weight', 'wis', 'x', 'y'
     ],
-  },
-};
 
-export function registerEQFLanguage(monaco: any) {
+    tokenizer: {
+      root: [
+        // Comments
+        [/\/\/.*$/, 'comment'],
+        
+        // Keywords (case-insensitive)
+        [/\b(?:Main|State|random)\b/i, 'keyword.control'],
+        [/\b(?:action|rule|goto|desc|coord|item)\b/i, 'keyword'],
+        [/\b(?:questname|version|hidden|hidden_end|disabled|minlevel|maxlevel|needadmin|adminreq|needclass|classreq|needquest|questreq|startnpc)\b/i, 'keyword.declaration'],
+        
+        // Actions - match function-like syntax
+        [/\b[A-Z][a-zA-Z]*(?=\s*\()/, {
+          cases: {
+            '@actions': 'support.function.action',
+            '@rules': 'support.function.rule',
+            '@default': 'identifier'
+          }
+        }],
+        
+        // Stats
+        [/\b(?:accuracy|agi|armor|cha|con|base_agi|base_cha|base_con|base_int|base_str|base_wis|evade|exp|goldbank|hp|int|level|mapid|maxhp|maxtp|maxsp|maxdam|maxweight|mindam|skillpoints|statpoints|str|tp|weight|wis|x|y)\b/i, 'variable.language'],
+        
+        // Strings
+        [/"([^"\\]|\\.)*$/, 'string.invalid'],
+        [/"/, 'string', '@string'],
+        
+        // Numbers
+        [/\b\d+\.?\d*\b/, 'number'],
+        
+        // Operators
+        [/[,;]/, 'delimiter'],
+        
+        // Brackets
+        [/[{}()]/, '@brackets'],
+        
+        // Identifiers (state names, random names, etc.)
+        [/[a-zA-Z_]\w*/, 'identifier'],
+      ],
+      
+      string: [
+        [/[^\\"]+/, 'string'],
+        [/\\./, 'string.escape'],
+        [/"/, 'string', '@pop']
+      ],
+    },
+  };
+}
+
+export function registerEQFLanguage(monaco: any, config?: ConfigData | null) {
+  // Get actions and rules from config or use defaults
+  const actions = config ? Object.keys(config.actions) : DEFAULT_ACTIONS;
+  const rules = config ? Object.keys(config.rules) : DEFAULT_RULES;
+  
   // Register language
   monaco.languages.register({ id: EQF_LANGUAGE_ID });
   
   // Set language configuration
   monaco.languages.setLanguageConfiguration(EQF_LANGUAGE_ID, eqfLanguageConfig);
   
-  // Set tokens provider
-  monaco.languages.setMonarchTokensProvider(EQF_LANGUAGE_ID, eqfLanguageTokens);
+  // Set tokens provider with dynamic actions/rules
+  monaco.languages.setMonarchTokensProvider(EQF_LANGUAGE_ID, createTokensProvider(actions, rules));
+  
+  // Register completion provider for actions and rules
+  monaco.languages.registerCompletionItemProvider(EQF_LANGUAGE_ID, {
+    provideCompletionItems: (model: any, position: any) => {
+      const suggestions: any[] = [];
+      
+      // Add action completions
+      actions.forEach(action => {
+        const doc = config?.actions[action];
+        suggestions.push({
+          label: action,
+          kind: monaco.languages.CompletionItemKind.Function,
+          insertText: `${action}()`,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: doc ? `${doc.signature}\n\n${doc.description}` : undefined,
+          detail: 'Action'
+        });
+      });
+      
+      // Add rule completions
+      rules.forEach(rule => {
+        const doc = config?.rules[rule];
+        suggestions.push({
+          label: rule,
+          kind: monaco.languages.CompletionItemKind.Function,
+          insertText: `${rule}()`,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: doc ? `${doc.signature}\n\n${doc.description}` : undefined,
+          detail: 'Rule'
+        });
+      });
+      
+      return { suggestions };
+    }
+  });
   
   // Define dark theme
   monaco.editor.defineTheme('eqf-dark', {

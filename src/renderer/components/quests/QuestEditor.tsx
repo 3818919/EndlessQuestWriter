@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QuestData } from '../../../eqf-parser';
 import QuestTextEditor from './QuestTextEditor';
 import QuestFlowDiagram from './QuestFlowDiagram';
-import { QUEST_TEMPLATES } from '../../utils/questTemplates';
+import { loadTemplates, getTemplateNames } from '../../services/templateService';
+import EditIcon from '@mui/icons-material/Edit';
 
 interface QuestEditorProps {
   quest: QuestData | null;
@@ -13,64 +14,129 @@ interface QuestEditorProps {
 }
 
 export default function QuestEditor({ quest, onSave, onExport, onDelete, theme = 'dark' }: QuestEditorProps) {
-  const [editorMode, setEditorMode] = useState<'text' | 'visual' | 'split'>('text');
+  const [editorMode, setEditorMode] = useState<'text' | 'visual' | 'split'>('visual');
   const [navigateToState, setNavigateToState] = useState<string | null>(null);
   const [highlightStateInVisual, setHighlightStateInVisual] = useState<string | null>(null);
+  const [templateNames, setTemplateNames] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [showMetadataDialog, setShowMetadataDialog] = useState(false);
+  const [editedMetadata, setEditedMetadata] = useState({
+    questName: '',
+    version: 1,
+    hidden: false
+  });
+
+  // Load template names on mount
+  useEffect(() => {
+    getTemplateNames().then(setTemplateNames);
+  }, []);
+
+  // Update edited metadata when quest changes
+  useEffect(() => {
+    if (quest) {
+      setEditedMetadata({
+        questName: quest.questName,
+        version: quest.version,
+        hidden: quest.hidden || false
+      });
+    }
+  }, [quest?.id]);
 
   const handleNavigateToState = (stateName: string) => {
-    console.log('[QuestEditor] handleNavigateToState called with:', stateName);
-    console.log('[QuestEditor] Current editorMode:', editorMode);
-    
-    // Set the state to navigate to FIRST
-    console.log('[QuestEditor] Setting navigateToState to:', stateName);
     setNavigateToState(stateName);
     
-    // Switch to split mode if in visual-only mode
     if (editorMode === 'visual') {
-      console.log('[QuestEditor] Switching from visual to split mode');
       setEditorMode('split');
-      // Give extra time for the text editor to mount and load text
       setTimeout(() => {
-        console.log('[QuestEditor] Re-triggering navigation after mode switch');
         setNavigateToState(null);
         setTimeout(() => setNavigateToState(stateName), 100);
       }, 300);
     }
     
-    // Clear after allowing text editor to process
     setTimeout(() => {
-      console.log('[QuestEditor] Clearing navigateToState');
       setNavigateToState(null);
     }, 1000);
   };
 
   const handleNavigateToVisual = (stateName: string) => {
-    console.log('[QuestEditor] handleNavigateToVisual called with:', stateName);
-    console.log('[QuestEditor] Current editorMode:', editorMode);
-    
-    // Switch to split or visual mode if in text-only mode
     if (editorMode === 'text') {
-      console.log('[QuestEditor] Switching from text to split mode');
       setEditorMode('split');
     }
     
-    // Highlight the state in the visual editor
-    // Note: This would require adding support in QuestFlowDiagram to highlight a specific node
-    // For now, we just ensure the visual editor is visible
     setHighlightStateInVisual(stateName);
     setTimeout(() => setHighlightStateInVisual(null), 2000);
   };
 
-  const handleLoadTemplate = (templateName: string) => {
+  const handleLoadTemplate = async (templateName: string) => {
     if (!quest || templateName === '') return;
     
-    const template = QUEST_TEMPLATES[templateName];
+    const templates = await loadTemplates();
+    const template = templates[templateName];
     if (template) {
-      // Load template data into current quest
+      const updatedTemplate = replaceNpcQuestIds(template, quest.id);
+      
       onSave(quest.id, {
-        ...template,
-        id: quest.id // Preserve the current quest ID
+        ...updatedTemplate,
+        id: quest.id
       });
+    }
+  };
+
+  const replaceNpcQuestIds = (template: Omit<QuestData, 'id'>, questId: number): Omit<QuestData, 'id'> => {
+    const NPC_QUEST_ID_ACTIONS = ['AddNpcText', 'AddNpcInput', 'AddNpcChat', 'AddNpcPM'];
+    const NPC_QUEST_ID_RULES = ['TalkedToNpc'];
+    
+    return {
+      ...template,
+      states: template.states.map(state => ({
+        ...state,
+        actions: state.actions.map(action => {
+          if (NPC_QUEST_ID_ACTIONS.includes(action.type) && action.params[0] === 1) {
+            const newParams = [questId, ...action.params.slice(1)];
+            return {
+              ...action,
+              params: newParams,
+              rawText: `${action.type}(${newParams.map(p => typeof p === 'string' ? `"${p}"` : p).join(', ')});`
+            };
+          }
+          return action;
+        }),
+        rules: state.rules.map(rule => {
+          if (NPC_QUEST_ID_RULES.includes(rule.type) && rule.params[0] === 1) {
+            const newParams = [questId, ...rule.params.slice(1)];
+            return {
+              ...rule,
+              params: newParams,
+              rawText: `${rule.type}(${newParams.map(p => typeof p === 'string' ? `"${p}"` : p).join(', ')}) goto ${rule.gotoState}`
+            };
+          }
+          return rule;
+        })
+      }))
+    };
+  };
+
+  const handleOpenMetadataDialog = () => {
+    if (quest) {
+      setEditedMetadata({
+        questName: quest.questName,
+        version: quest.version,
+        hidden: quest.hidden || false
+      });
+      setShowMetadataDialog(true);
+    }
+  };
+
+  const handleSaveMetadata = () => {
+    if (quest) {
+      onSave(quest.id, {
+        questName: editedMetadata.questName,
+        version: editedMetadata.version,
+        hidden: editedMetadata.hidden || undefined
+      });
+      setShowMetadataDialog(false);
+      setLastSaved(new Date());
     }
   };
 
@@ -92,6 +158,38 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete, theme =
 
   const handleSave = (updates: Partial<QuestData>) => {
     onSave(quest.id, updates);
+    setLastSaved(new Date());
+  };
+
+  const handleManualSave = async () => {
+    setIsSaving(true);
+    onSave(quest.id, quest);
+    setLastSaved(new Date());
+    setTimeout(() => setIsSaving(false), 500);
+  };
+
+  const handleVisualChange = (updates: Partial<QuestData>) => {
+    onSave(quest.id, updates);
+    setLastSaved(new Date());
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '8px 12px',
+    backgroundColor: 'var(--bg-tertiary)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-primary)',
+    borderRadius: '4px',
+    fontSize: '14px',
+    outline: 'none',
+    boxSizing: 'border-box' as const
+  };
+
+  const labelStyle = {
+    display: 'block',
+    marginBottom: '6px',
+    color: 'var(--text-secondary)',
+    fontSize: '13px'
   };
 
   return (
@@ -108,28 +206,52 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete, theme =
         padding: '12px 16px',
         backgroundColor: 'var(--bg-secondary)',
         borderBottom: '1px solid var(--border-primary)',
-        gap: '12px'
+        gap: '12px',
+        flexWrap: 'wrap'
       }}>
-        <div style={{ flex: 1 }}>
-          <h2 style={{ 
-            margin: 0, 
-            fontSize: '16px', 
-            fontWeight: '600',
-            color: 'var(--text-primary)'
-          }}>
-            {quest.questName || `Quest ${quest.id}`}
-          </h2>
+        <div style={{ flex: '1 1 200px', minWidth: '150px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h2 style={{ 
+              margin: 0, 
+              fontSize: '16px', 
+              fontWeight: '600',
+              color: 'var(--text-primary)'
+            }}>
+              {quest.questName || `Quest ${quest.id}`}
+            </h2>
+            <button
+              onClick={handleOpenMetadataDialog}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '4px'
+              }}
+              title="Edit quest properties"
+            >
+              <EditIcon fontSize="small" />
+            </button>
+          </div>
           <div style={{
             fontSize: '12px',
             color: 'var(--text-secondary)',
             marginTop: '4px'
           }}>
-            Quest ID: {quest.id} | Version: {quest.version} | {quest.states.length} states
+            ID: {quest.id} | v{quest.version} | {quest.states.length} states{quest.hidden ? ' | Hidden' : ''}
+            {lastSaved && (
+              <span style={{ marginLeft: '12px', color: 'var(--text-tertiary)' }}>
+                Saved: {lastSaved.toLocaleTimeString()}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Template Selector (only in visual/split mode) */}
-        {(editorMode === 'visual' || editorMode === 'split') && (
+        {/* Template Selector */}
+        {(editorMode === 'visual' || editorMode === 'split') && templateNames.length > 0 && (
           <select
             onChange={(e) => handleLoadTemplate(e.target.value)}
             value=""
@@ -145,7 +267,7 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete, theme =
             }}
           >
             <option value="">Load Template...</option>
-            {Object.keys(QUEST_TEMPLATES).map(templateName => (
+            {templateNames.map(templateName => (
               <option key={templateName} value={templateName}>
                 {templateName}
               </option>
@@ -162,10 +284,10 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete, theme =
           padding: '2px'
         }}>
           <button
-            onClick={() => setEditorMode('text')}
+            onClick={() => setEditorMode('visual')}
             style={{
               padding: '6px 12px',
-              backgroundColor: editorMode === 'text' ? 'var(--accent-primary)' : 'transparent',
+              backgroundColor: editorMode === 'visual' ? 'var(--accent-primary)' : 'transparent',
               color: 'var(--text-primary)',
               border: 'none',
               borderRadius: '3px',
@@ -175,7 +297,7 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete, theme =
               transition: 'background-color 0.2s'
             }}
           >
-            Text
+            Visual
           </button>
           <button
             onClick={() => setEditorMode('split')}
@@ -194,10 +316,10 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete, theme =
             Split
           </button>
           <button
-            onClick={() => setEditorMode('visual')}
+            onClick={() => setEditorMode('text')}
             style={{
               padding: '6px 12px',
-              backgroundColor: editorMode === 'visual' ? 'var(--accent-primary)' : 'transparent',
+              backgroundColor: editorMode === 'text' ? 'var(--accent-primary)' : 'transparent',
               color: 'var(--text-primary)',
               border: 'none',
               borderRadius: '3px',
@@ -207,10 +329,29 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete, theme =
               transition: 'background-color 0.2s'
             }}
           >
-            Visual
+            Text
           </button>
         </div>
 
+        {/* Save Button */}
+        <button
+          onClick={handleManualSave}
+          disabled={isSaving}
+          style={{
+            padding: '6px 16px',
+            backgroundColor: 'var(--accent-success)',
+            color: 'var(--text-primary)',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: isSaving ? 'default' : 'pointer',
+            fontSize: '13px',
+            opacity: isSaving ? 0.7 : 1
+          }}
+        >
+          {isSaving ? 'Saving...' : 'Save'}
+        </button>
+
+        {/* Delete Button */}
         <button
           onClick={() => {
             if (confirm(`Delete quest "${quest.questName}" (ID: ${quest.id})?`)) {
@@ -236,7 +377,7 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete, theme =
         {editorMode === 'text' ? (
           <QuestTextEditor quest={quest} onSave={handleSave} navigateToState={navigateToState} onNavigateToVisual={handleNavigateToVisual} theme={theme} />
         ) : editorMode === 'visual' ? (
-          <QuestFlowDiagram quest={quest} onQuestChange={handleSave} onNavigateToState={handleNavigateToState} highlightState={highlightStateInVisual} />
+          <QuestFlowDiagram quest={quest} onQuestChange={handleVisualChange} onNavigateToState={handleNavigateToState} highlightState={highlightStateInVisual} />
         ) : (
           // Split view
           <div style={{ display: 'flex', height: '100%', gap: '1px', backgroundColor: 'var(--border-primary)' }}>
@@ -244,11 +385,168 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete, theme =
               <QuestTextEditor quest={quest} onSave={handleSave} navigateToState={navigateToState} onNavigateToVisual={handleNavigateToVisual} theme={theme} />
             </div>
             <div style={{ flex: 1, overflow: 'hidden' }}>
-              <QuestFlowDiagram quest={quest} onQuestChange={handleSave} onNavigateToState={handleNavigateToState} highlightState={highlightStateInVisual} />
+              <QuestFlowDiagram quest={quest} onQuestChange={handleVisualChange} onNavigateToState={handleNavigateToState} highlightState={highlightStateInVisual} />
             </div>
           </div>
         )}
       </div>
+
+      {/* Metadata Edit Dialog */}
+      {showMetadataDialog && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowMetadataDialog(false)}
+        >
+          <div 
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: '8px',
+              padding: '24px',
+              minWidth: '400px',
+              maxWidth: '500px',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+              border: '1px solid var(--border-primary)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ 
+              margin: '0 0 20px 0', 
+              color: 'var(--text-primary)',
+              fontSize: '18px'
+            }}>
+              Edit Quest Properties
+            </h3>
+            
+            {/* Quest ID (read-only) */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>
+                Quest ID
+              </label>
+              <input
+                type="text"
+                value={quest.id}
+                disabled
+                style={{
+                  ...inputStyle,
+                  opacity: 0.6,
+                  cursor: 'not-allowed'
+                }}
+              />
+              <div style={{ 
+                color: 'var(--text-tertiary)', 
+                fontSize: '11px',
+                marginTop: '4px'
+              }}>
+                Quest ID cannot be changed after creation
+              </div>
+            </div>
+
+            {/* Quest Name */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>
+                Quest Name
+              </label>
+              <input
+                type="text"
+                value={editedMetadata.questName}
+                onChange={(e) => setEditedMetadata({ ...editedMetadata, questName: e.target.value })}
+                placeholder="Enter quest name"
+                style={inputStyle}
+              />
+            </div>
+
+            {/* Version */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>
+                Version
+              </label>
+              <input
+                type="number"
+                value={editedMetadata.version}
+                onChange={(e) => setEditedMetadata({ ...editedMetadata, version: parseInt(e.target.value) || 1 })}
+                min={1}
+                style={{ ...inputStyle, width: '100px' }}
+              />
+            </div>
+
+            {/* Hidden Checkbox */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                cursor: 'pointer',
+                color: 'var(--text-primary)',
+                fontSize: '14px'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={editedMetadata.hidden}
+                  onChange={(e) => setEditedMetadata({ ...editedMetadata, hidden: e.target.checked })}
+                  style={{ 
+                    width: '16px', 
+                    height: '16px',
+                    cursor: 'pointer'
+                  }}
+                />
+                Hidden Quest
+              </label>
+              <div style={{ 
+                color: 'var(--text-tertiary)', 
+                fontSize: '11px',
+                marginTop: '4px',
+                marginLeft: '24px'
+              }}>
+                Hidden quests don't appear in the player's quest log
+              </div>
+            </div>
+            
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowMetadataDialog(false)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveMetadata}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: 'var(--accent-primary)',
+                  color: 'var(--text-primary)',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500
+                }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

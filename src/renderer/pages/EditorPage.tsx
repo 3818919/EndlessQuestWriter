@@ -1,225 +1,54 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import ItemList from '../components/items/ItemList';
-import NpcList from '../components/npcs/NpcList';
-import ClassList from '../components/classes/ClassList';
-import SkillList from '../components/skills/SkillList';
-import InnList from '../components/inns/InnList';
+import React, { useState } from 'react';
 import QuestList from '../components/quests/QuestList';
-import ItemEditor from '../components/items/ItemEditor';
-import NpcEditor from '../components/npcs/NpcEditor';
-import ClassEditor from '../components/classes/ClassEditor';
-import SkillEditor from '../components/skills/SkillEditor';
-import InnEditor from '../components/inns/InnEditor';
 import QuestEditor from '../components/quests/QuestEditor';
-import SkillPreview from '../components/skills/SkillPreview';
-import DropsEditor from '../components/npcs/DropsEditor';
-import ItemDroppedBy from '../components/items/ItemDroppedBy';
-import CharacterPreview from '../components/items/CharacterPreview';
-import NpcPreview from '../components/npcs/NpcPreview';
-import PaperdollSlots from '../components/items/PaperdollSlots';
-import AppearanceControls from '../components/items/AppearanceControls';
-import VerticalSidebar from '../components/VerticalSidebar';
 import StatusBar from '../components/StatusBar';
 import ProjectSettings from '../components/ProjectSettings';
-import GitPage from './GitPage';
-import { useResizablePanel } from '../hooks/useResizablePanel';
-import FaceIcon from '@mui/icons-material/Face';
-import CheckroomIcon from '@mui/icons-material/Checkroom';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import DownloadIcon from '@mui/icons-material/Download';
+import CreditsPage from './CreditsPage';
+import SettingsIcon from '@mui/icons-material/Settings';
+import ReplyIcon from '@mui/icons-material/Reply';
+import InfoIcon from '@mui/icons-material/Info';
+import QuestIcon from '../components/icons/QuestIcon';
 import { QuestData } from '../../eqf-parser';
-import type { TabType } from '../hooks/useProject';
+
+interface NewQuestData {
+  id: number;
+  name: string;
+  version: number;
+  hidden: boolean;
+}
 
 interface EditorPageProps {
   // Data
-  eifData: any;
-  enfData: any;
-  ecfData: any;
-  esfData: any;
-  innData: any;
-  dropsData: Map<number, any[]>;
   questData: Record<number, QuestData>;
-  pubDirectory: string | null;
-  activeTab: 'items' | 'npcs' | 'classes' | 'skills' | 'inns' | 'quests' | 'git';
-  setActiveTab: (tab: 'items' | 'npcs' | 'classes' | 'skills' | 'inns' | 'quests' | 'git') => void;
-  tabOrder: TabType[];
-  onTabReorder: (newOrder: TabType[]) => void;
   
   // Project settings
   projectName: string;
   currentProject: string;
-  updateProjectSettings: (settings: { projectName?: string; gfxPath?: string; pubDirectory?: string }) => Promise<void>;
+  serverPath: string;
+  updateProjectSettings: (settings: { projectName?: string; serverPath?: string }) => Promise<void>;
   theme: 'dark' | 'light';
   toggleTheme: () => void;
   
-  // Items operations
-  addItem: () => void;
-  deleteItem: (id: number) => void;
-  duplicateItem: (id: number) => void;
-  updateItem: (id: number, updates: any) => void;
-  
-  // NPCs operations
-  addNpc: () => void;
-  deleteNpc: (id: number) => void;
-  duplicateNpc: (id: number) => void;
-  updateNpc: (id: number, updates: any) => void;
-  
-  // Classes operations
-  addClass: () => void;
-  deleteClass: (id: number) => void;
-  duplicateClass: (id: number) => void;
-  updateClass: (id: number, updates: any) => void;
-  
-  // Skills operations
-  addSkill: () => void;
-  deleteSkill: (id: number) => void;
-  duplicateSkill: (id: number) => void;
-  updateSkill: (id: number, updates: any) => void;
-  
-  // Inn operations
-  addInn: () => void;
-  deleteInn: (index: number) => void;
-  duplicateInn: (index: number) => void;
-  updateInn: (index: number, updates: any) => void;
-  
-  // Drops operations
-  updateNpcDrops: (npcId: number, drops: any[]) => void;
-  saveDropsFile: () => Promise<boolean | undefined>;
-  
-  // Equipment
-  equippedItems: Record<string, any>;
-  equipItem: (item: any, slotKey?: string) => void;
-  unequipSlot: (slotKey: string) => void;
-  clearAll: () => void;
-  
-  // Appearance
-  gender: number;
-  setGender: (gender: number) => void;
-  hairStyle: number;
-  setHairStyle: (style: number) => void;
-  hairColor: number;
-  setHairColor: (color: number) => void;
-  skinTone: number;
-  setSkinTone: (tone: number) => void;
-  presets: any[];
-  savePreset: (name: string) => void;
-  loadPreset: (preset: any) => void;
-  deletePreset: (name: string) => void;
-  
-  // GFX
-  gfxFolder: string;
-  setGfxFolder: (folder: string) => void;
-  loadGfx: (gfxNumber: number, resourceId?: number) => Promise<string | null>;
-  preloadGfxBatch: (requests: Array<{ gfxNumber: number; resourceId: number }>) => Promise<void>;
-  isLoadingInBackground: boolean;
-  loadingProgress: number;
-  loadingMessage: string;
-  
   // Project operations
-  saveAllFiles: () => Promise<void>;
   returnToProjects: () => void;
-  importItems: () => Promise<void>;
-  importNpcs: () => Promise<void>;
-  importDrops: () => Promise<void>;
-  importClasses: () => Promise<void>;
-  importSkills: () => Promise<void>;
-  importInns: () => Promise<void>;
-  exportItems: () => Promise<void>;
-  exportNpcs: () => Promise<void>;
-  exportDrops: () => Promise<void>;
-  exportClasses: () => Promise<void>;
-  exportSkills: () => Promise<void>;
-  exportInns: () => Promise<void>;
   
   // Quest operations
-  createQuest: (templateName?: string) => Promise<number>;
+  createQuest: (questData: NewQuestData) => Promise<number>;
   deleteQuest: (id: number) => Promise<void>;
   duplicateQuest: (id: number) => Promise<number>;
   updateQuest: (id: number, updates: Partial<QuestData>) => Promise<void>;
   importQuest: (eqfPath: string) => Promise<number>;
   exportQuest: (id: number, savePath?: string) => Promise<void>;
-  
-  // Legacy stubs
-  loadDirectory: () => void;
 }
 
 const EditorPage: React.FC<EditorPageProps> = ({
-  eifData,
-  enfData,
-  ecfData,
-  esfData,
   projectName,
   currentProject,
+  serverPath,
   updateProjectSettings,
   theme,
   toggleTheme,
-  innData,
-  dropsData,
-  pubDirectory,
-  activeTab,
-  setActiveTab,
-  tabOrder,
-  onTabReorder,
-  addItem,
-  deleteItem,
-  duplicateItem,
-  updateItem,
-  addNpc,
-  deleteNpc,
-  duplicateNpc,
-  updateNpc,
-  addClass,
-  deleteClass,
-  duplicateClass,
-  updateClass,
-  addSkill,
-  deleteSkill,
-  duplicateSkill,
-  updateSkill,
-  addInn,
-  deleteInn,
-  duplicateInn,
-  updateInn,
-  updateNpcDrops,
-  saveDropsFile,
-  equippedItems,
-  equipItem,
-  unequipSlot,
-  clearAll,
-  gender,
-  setGender,
-  hairStyle,
-  setHairStyle,
-  hairColor,
-  setHairColor,
-  skinTone,
-  setSkinTone,
-  presets,
-  savePreset,
-  loadPreset,
-  deletePreset,
-  gfxFolder,
-  setGfxFolder,
-  loadGfx,
-  preloadGfxBatch,
-  isLoadingInBackground,
-  loadingProgress,
-  loadingMessage,
-  saveAllFiles,
   returnToProjects,
-  importItems,
-  importNpcs,
-  importDrops,
-  importClasses,
-  importSkills,
-  importInns,
-  exportItems,
-  exportNpcs,
-  exportDrops,
-  exportClasses,
-  exportSkills,
-  exportInns,
-  loadDirectory,
   questData,
   createQuest,
   deleteQuest,
@@ -228,66 +57,20 @@ const EditorPage: React.FC<EditorPageProps> = ({
   importQuest,
   exportQuest
 }) => {
-  // UI state - lives in EditorPage since it's editor-specific
-  const [appearanceTab, setAppearanceTab] = useState('appearance');
-  const [npcTab, setNpcTab] = useState('drops');
+  // UI state
+  const [activeTab, setActiveTab] = useState<'quests' | 'credits'>('quests');
   const [leftPanelMinimized, setLeftPanelMinimized] = useState(false);
-  const [showPreview, setShowPreview] = useState(true);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
-  const [selectedNpcId, setSelectedNpcId] = useState<number | null>(null);
-  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
-  const [selectedSkillId, setSelectedSkillId] = useState<number | null>(null);
-  const [selectedInnIndex, setSelectedInnIndex] = useState<number | null>(null);
   const [selectedQuestId, setSelectedQuestId] = useState<number | null>(null);
 
-  // Select first NPC when switching to NPCs tab
-  useEffect(() => {
-    if (activeTab === 'npcs' && selectedNpcId === null && enfData.npcs) {
-      const npcIds = Object.keys(enfData.npcs).map(Number).filter(id => id > 0);
-      if (npcIds.length > 0) {
-        const firstNpcId = Math.min(...npcIds);
-        setSelectedNpcId(firstNpcId);
-      }
-    }
-  }, [activeTab, selectedNpcId, enfData.npcs]);
-
-  // Resizable panel hook - only used in editor
-  const {
-    panelWidth: rightPanelWidth,
-    isResizing,
-    isMinimized: isPanelMinimized,
-    handleMouseDown,
-    setIsMinimized: setIsPanelMinimized
-  } = useResizablePanel(400, 300, 'rightPanelWidth');
-
   // Derived values
-  const selectedItem = selectedItemId !== null ? eifData.items[selectedItemId] : null;
-  const selectedNpc = selectedNpcId !== null ? enfData.npcs[selectedNpcId] : null;
-  const selectedClass = selectedClassId !== null ? ecfData.classes[selectedClassId] : null;
-  const selectedSkill = selectedSkillId !== null ? esfData.skills[selectedSkillId] : null;
-  const selectedInn = selectedInnIndex !== null ? innData.inns[selectedInnIndex] : null;
   const selectedQuest = selectedQuestId !== null ? questData[selectedQuestId] : null;
 
-  // Wrapper for equipItem to match PaperdollSlots signature
-  const handleEquipItemFromId = useCallback((itemId: number, slotKey: string) => {
-    const item = eifData.items[itemId];
-    if (item) {
-      equipItem(item, slotKey);
-    }
-  }, [eifData.items, equipItem]);
-
-  // Legacy stubs
-  const selectDataFolder = () => {};
-  const handleResetFileSelection = () => {};
-  const handleLoadDataFromPath = () => {};
-
-  const handleSaveProjectSettings = async (settings: { projectName: string; gfxPath: string | null; pubDirectory: string | null }) => {
+  const handleSaveProjectSettings = async (settings: { projectName: string; serverPath: string | null }) => {
     try {
       await updateProjectSettings({
         projectName: settings.projectName,
-        gfxPath: settings.gfxPath || undefined,
-        pubDirectory: settings.pubDirectory || undefined
+        serverPath: settings.serverPath || undefined
       });
       setShowSettingsModal(false);
       alert('Project settings updated successfully!');
@@ -304,12 +87,12 @@ const EditorPage: React.FC<EditorPageProps> = ({
     }
 
     try {
-      const result = await window.electronAPI.selectFile({
-        filters: [{ name: 'Quest Files', extensions: ['eqf'] }]
-      });
+      const file = await window.electronAPI.openFile([
+        { name: 'Quest Files', extensions: ['eqf'] }
+      ]);
 
-      if (result.success && result.path) {
-        const questId = await importQuest(result.path);
+      if (file) {
+        const questId = await importQuest(file);
         setSelectedQuestId(questId);
       }
     } catch (error) {
@@ -318,9 +101,9 @@ const EditorPage: React.FC<EditorPageProps> = ({
     }
   };
 
-  const handleCreateQuest = async (templateName?: string) => {
+  const handleCreateQuest = async (questData: NewQuestData) => {
     try {
-      const questId = await createQuest(templateName);
+      const questId = await createQuest(questData);
       setSelectedQuestId(questId);
       return questId;
     } catch (error) {
@@ -330,205 +113,59 @@ const EditorPage: React.FC<EditorPageProps> = ({
     }
   };
 
+  const handleTabClick = (tab: 'quests' | 'credits') => {
+    if (tab === 'quests' && activeTab === 'quests') {
+      setLeftPanelMinimized(!leftPanelMinimized);
+    } else {
+      setActiveTab(tab);
+      if (leftPanelMinimized && tab === 'quests') {
+        setLeftPanelMinimized(false);
+      }
+    }
+  };
+
   return (
     <div className="app">
-      {activeTab !== 'git' && (
-      <VerticalSidebar
-        activeTab={activeTab}
-        tabOrder={tabOrder}
-        onTabChange={(tab: string) => setActiveTab(tab as any)}
-        onTabReorder={onTabReorder}
-        onSave={saveAllFiles}
-        onImportItems={importItems}
-        onImportNpcs={importNpcs}
-        onImportDrops={importDrops}
-        onImportClasses={importClasses}
-        onImportSkills={importSkills}
-        onImportInns={importInns}
-        onImportQuest={handleImportQuest}
-        onExportNpcs={exportNpcs}
-        onExportItems={exportItems}
-        onExportDrops={exportDrops}
-        onExportClasses={exportClasses}
-        onExportSkills={exportSkills}
-        onExportInns={exportInns}
-        onSettings={() => setShowSettingsModal(true)}
-        onReturnToProjects={returnToProjects}
-        isSaveDisabled={false}
-        leftPanelMinimized={leftPanelMinimized}
-        setLeftPanelMinimized={setLeftPanelMinimized}
-        theme={theme}
-        toggleTheme={toggleTheme}
-        onGitClick={() => setActiveTab('git')}
-      />
-      )}
+      {/* Left Sidebar */}
+      <div className="left-vertical-sidebar">
+        <button
+          className={`left-sidebar-button ${activeTab === 'quests' ? 'active' : ''}`}
+          onClick={() => handleTabClick('quests')}
+          title="Quests"
+        >
+          <QuestIcon size={24} />
+        </button>
+        
+        <div className="sidebar-spacer"></div>
+        
+        <button
+          className={`left-sidebar-button ${activeTab === 'credits' ? 'active' : ''}`}
+          onClick={() => handleTabClick('credits')}
+          title="Credits"
+        >
+          <InfoIcon />
+        </button>
+        <button
+          className="left-sidebar-button"
+          onClick={returnToProjects}
+          title="Return to Projects"
+        >
+          <ReplyIcon />
+        </button>
+        <button
+          className="left-sidebar-button"
+          onClick={() => setShowSettingsModal(true)}
+          title="Settings"
+        >
+          <SettingsIcon />
+        </button>
+      </div>
       
-      {activeTab === 'git' ? (
-        <>
-          <VerticalSidebar
-            activeTab={activeTab}
-            tabOrder={tabOrder}
-            onTabChange={(tab: string) => setActiveTab(tab as any)}
-            onTabReorder={onTabReorder}
-            onSave={saveAllFiles}
-            onImportItems={importItems}
-            onImportNpcs={importNpcs}
-            onImportDrops={importDrops}
-            onImportClasses={importClasses}
-            onImportSkills={importSkills}
-            onImportInns={importInns}
-            onImportQuest={handleImportQuest}
-            onExportNpcs={exportNpcs}
-            onExportItems={exportItems}
-            onExportDrops={exportDrops}
-            onExportClasses={exportClasses}
-            onExportSkills={exportSkills}
-            onExportInns={exportInns}
-            onSettings={() => setShowSettingsModal(true)}
-            onReturnToProjects={returnToProjects}
-            isSaveDisabled={false}
-            leftPanelMinimized={leftPanelMinimized}
-            setLeftPanelMinimized={setLeftPanelMinimized}
-            theme={theme}
-            toggleTheme={toggleTheme}
-            onGitClick={() => setActiveTab('git')}
-          />
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <GitPage currentProject={currentProject} projectName={projectName} />
-          </div>
-        </>
+      {activeTab === 'credits' ? (
+        <CreditsPage theme={theme} />
       ) : (
-      <div className="main-content">
-        <div className={`left-panel ${leftPanelMinimized ? 'minimized' : ''}`}>
-          <div style={{ 
-            display: activeTab === 'items' ? 'flex' : 'none', 
-            flex: 1,
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            <ItemList
-              items={eifData.items}
-              selectedItemId={selectedItemId}
-              onSelectItem={setSelectedItemId}
-              onAddItem={addItem}
-              onDeleteItem={deleteItem}
-              onDuplicateItem={duplicateItem}
-              onLoadFile={loadDirectory}
-              currentFile={pubDirectory}
-              onSelectGfxFolder={selectDataFolder}
-              gfxFolder={gfxFolder}
-              loadGfx={loadGfx}
-              preloadGfxBatch={preloadGfxBatch}
-              onEquipItem={equipItem}
-              showSettingsModal={showSettingsModal}
-              setShowSettingsModal={setShowSettingsModal}
-              leftPanelMinimized={leftPanelMinimized}
-              onResetFileSelection={handleResetFileSelection}
-              onLoadEIFFromPath={handleLoadDataFromPath}
-              onSelectGfxFromPath={handleLoadDataFromPath}
-              currentProject={currentProject}
-            />
-          </div>
-          
-          <div style={{ 
-            display: activeTab === 'npcs' ? 'flex' : 'none', 
-            flex: 1,
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            <NpcList
-              npcs={enfData.npcs}
-              selectedNpcId={selectedNpcId}
-              onSelectNpc={setSelectedNpcId}
-              onAddNpc={addNpc}
-              onDeleteNpc={deleteNpc}
-              onDuplicateNpc={duplicateNpc}
-              currentFile={pubDirectory}
-              showSettingsModal={showSettingsModal}
-              setShowSettingsModal={setShowSettingsModal}
-              leftPanelMinimized={leftPanelMinimized}
-              onResetFileSelection={handleResetFileSelection}
-              loadGfx={loadGfx}
-              gfxFolder={gfxFolder}
-              preloadGfxBatch={preloadGfxBatch}
-              currentProject={currentProject}
-            />
-          </div>
-          
-          <div style={{ 
-            display: activeTab === 'classes' ? 'flex' : 'none', 
-            flex: 1,
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            <ClassList
-              classes={ecfData.classes}
-              selectedClassId={selectedClassId}
-              onSelectClass={setSelectedClassId}
-              onAddClass={addClass}
-              onDeleteClass={deleteClass}
-              onDuplicateClass={duplicateClass}
-              showSettingsModal={showSettingsModal}
-              setShowSettingsModal={setShowSettingsModal}
-              leftPanelMinimized={leftPanelMinimized}
-            />
-          </div>
-          
-          <div style={{ 
-            display: activeTab === 'skills' ? 'flex' : 'none', 
-            flex: 1,
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            <SkillList
-              skills={esfData.skills}
-              selectedSkillId={selectedSkillId}
-              onSelectSkill={setSelectedSkillId}
-              onAddSkill={addSkill}
-              onDeleteSkill={deleteSkill}
-              onDuplicateSkill={duplicateSkill}
-              showSettingsModal={showSettingsModal}
-              setShowSettingsModal={setShowSettingsModal}
-              leftPanelMinimized={leftPanelMinimized}
-              loadGfx={loadGfx}
-              gfxFolder={gfxFolder}
-            />
-          </div>
-
-          <div style={{ 
-            display: activeTab === 'inns' ? 'flex' : 'none', 
-            flex: 1,
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            <InnList
-              inns={innData.inns}
-              selectedInn={selectedInn}
-              onSelectInn={(inn) => {
-                const index = innData.inns.indexOf(inn);
-                setSelectedInnIndex(index);
-              }}
-              onAddInn={addInn}
-              onDeleteInn={(inn) => {
-                const index = innData.inns.indexOf(inn);
-                deleteInn(index);
-              }}
-              onDuplicateInn={(inn) => {
-                const index = innData.inns.indexOf(inn);
-                duplicateInn(index);
-              }}
-              currentFile={pubDirectory}
-              leftPanelMinimized={leftPanelMinimized}
-              currentProject={currentProject}
-            />
-          </div>
-
-          <div style={{ 
-            display: activeTab === 'quests' ? 'flex' : 'none', 
-            flex: 1,
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
+        <div className="main-content">
+          <div className={`left-panel ${leftPanelMinimized ? 'minimized' : ''}`}>
             <QuestList
               quests={questData}
               selectedQuestId={selectedQuestId}
@@ -541,61 +178,8 @@ const EditorPage: React.FC<EditorPageProps> = ({
               leftPanelMinimized={leftPanelMinimized}
             />
           </div>
-        </div>
-        
-        <div className="center-panel">
-          {activeTab === 'items' && selectedItem && (
-            <ItemEditor
-              item={selectedItem}
-              onUpdateItem={updateItem}
-              onDuplicateItem={duplicateItem}
-              onDeleteItem={deleteItem}
-              loadGfx={loadGfx}
-              gfxFolder={gfxFolder}
-              onSetGfxFolder={setGfxFolder}
-              onEquipItem={equipItem}
-            />
-          )}
           
-          {activeTab === 'npcs' && selectedNpc && (
-            <NpcEditor
-              npc={selectedNpc}
-              onUpdate={updateNpc}
-              onDuplicateNpc={duplicateNpc}
-              onDeleteNpc={deleteNpc}
-            />
-          )}
-          
-          {activeTab === 'classes' && selectedClass && (
-            <ClassEditor
-              classData={selectedClass}
-              onUpdateClass={updateClass}
-              onDuplicateClass={duplicateClass}
-              onDeleteClass={deleteClass}
-            />
-          )}
-          
-          {activeTab === 'skills' && selectedSkill && (
-            <SkillEditor
-              skill={selectedSkill}
-              onUpdateSkill={updateSkill}
-              onDuplicateSkill={duplicateSkill}
-              onDeleteSkill={deleteSkill}
-            />
-          )}
-
-          {activeTab === 'inns' && selectedInn && (
-            <InnEditor
-              inn={selectedInn}
-              innIndex={selectedInnIndex!}
-              onUpdateInn={updateInn}
-              onDuplicateInn={duplicateInn}
-              onDeleteInn={deleteInn}
-              npcs={enfData.npcs}
-            />
-          )}
-
-          {activeTab === 'quests' && (
+          <div className="center-panel">
             <QuestEditor
               quest={selectedQuest}
               onSave={updateQuest}
@@ -603,218 +187,20 @@ const EditorPage: React.FC<EditorPageProps> = ({
               onDelete={deleteQuest}
               theme={theme}
             />
-          )}
-        </div>
-        
-        {activeTab !== 'classes' && activeTab !== 'inns' && activeTab !== 'quests' && (
-        <div 
-          className={`right-panel ${isResizing ? 'resizing' : ''} ${(isPanelMinimized || (activeTab === 'npcs' && !showPreview && npcTab !== 'drops') || (activeTab === 'items' && appearanceTab === 'droppedBy' && !selectedItem)) ? 'minimized' : ''}`}
-          style={{ width: (isPanelMinimized || (activeTab === 'npcs' && !showPreview && npcTab !== 'drops') || (activeTab === 'items' && appearanceTab === 'droppedBy' && !selectedItem)) ? '60px' : `${rightPanelWidth}px` }}
-        >
-          <div className="resize-handle" onMouseDown={handleMouseDown} />
-          
-          <div className="right-panel-content">
-            <div className="right-panel-top">
-              {activeTab === 'items' && appearanceTab === 'appearance' && (
-                <AppearanceControls
-                  gender={gender}
-                  setGender={setGender}
-                  hairStyle={hairStyle}
-                  setHairStyle={setHairStyle}
-                  hairColor={hairColor}
-                  setHairColor={setHairColor}
-                  skinTone={skinTone}
-                  setSkinTone={setSkinTone}
-                  gfxFolder={gfxFolder}
-                  loadGfx={loadGfx}
-                  presets={presets}
-                  onSavePreset={savePreset}
-                  onLoadPreset={loadPreset}
-                  onDeletePreset={deletePreset}
-                />
-              )}
-              
-              {activeTab === 'items' && appearanceTab === 'equipment' && (
-                <PaperdollSlots
-                  equippedItems={equippedItems}
-                  onEquipItem={handleEquipItemFromId}
-                  onUnequipSlot={unequipSlot}
-                  onClearAll={clearAll}
-                  items={eifData.items}
-                  onAutoGenderSwitch={setGender}
-                  loadGfx={loadGfx}
-                  gfxFolder={gfxFolder}
-                />
-              )}
-
-              {activeTab === 'items' && appearanceTab === 'droppedBy' && selectedItem && (
-                <ItemDroppedBy
-                  itemId={selectedItem.id}
-                  dropsData={dropsData}
-                  npcs={enfData.npcs}
-                  onNavigateToNpc={(npcId) => {
-                    setActiveTab('npcs');
-                    setSelectedNpcId(npcId);
-                  }}
-                  onAddToNpcDrops={(npcId) => {
-                    const currentDrops = dropsData.get(npcId) || [];
-                    const newDrop = {
-                      itemId: selectedItem.id,
-                      min: 1,
-                      max: 1,
-                      percentage: 10
-                    };
-                    updateNpcDrops(npcId, [...currentDrops, newDrop]);
-                    saveDropsFile();
-                  }}
-                />
-              )}
-              
-              {activeTab === 'npcs' && npcTab === 'drops' && selectedNpc && (
-                <DropsEditor
-                  npcId={selectedNpc.id}
-                  drops={dropsData.get(selectedNpc.id) || []}
-                  onUpdateDrops={(npcId, drops) => {
-                    updateNpcDrops(npcId, drops);
-                    saveDropsFile();
-                  }}
-                  items={eifData.items}
-                  onNavigateToItem={(itemId) => {
-                    setActiveTab('items');
-                    setSelectedItemId(itemId);
-                  }}
-                />
-              )}
-            </div>
-            
-            {showPreview && activeTab === 'items' && (
-            <div className="right-panel-bottom">
-              <CharacterPreview
-                equippedItems={equippedItems}
-                gender={gender}
-                hairStyle={hairStyle}
-                hairColor={hairColor}
-                skinTone={skinTone}
-                loadGfx={loadGfx}
-                gfxFolder={gfxFolder}
-              />
-            </div>
-            )}
-            
-            {showPreview && activeTab === 'npcs' && selectedNpc && (
-            <div className="right-panel-bottom">
-              <NpcPreview
-                npc={selectedNpc}
-                loadGfx={loadGfx}
-                gfxFolder={gfxFolder}
-              />
-            </div>
-            )}
-            
-            {showPreview && activeTab === 'skills' && selectedSkill && (
-            <div className="right-panel-bottom">
-              <SkillPreview
-                skill={selectedSkill}
-                loadGfx={loadGfx}
-                gfxFolder={gfxFolder}
-              />
-            </div>
-            )}
-          </div>
-          
-          <div className="vertical-sidebar">
-            {activeTab === 'items' && (
-              <>
-                <button
-                  className={`sidebar-button ${appearanceTab === 'appearance' && !isPanelMinimized ? 'active' : ''}`}
-                  onClick={() => {
-                    if (appearanceTab === 'appearance' && !isPanelMinimized) {
-                      setIsPanelMinimized(true);
-                    } else {
-                      setAppearanceTab('appearance');
-                      setIsPanelMinimized(false);
-                    }
-                  }}
-                  title="Appearance"
-                >
-                  <FaceIcon />
-                  <span className="sidebar-label">Appearance</span>
-                </button>
-                <button
-                  className={`sidebar-button ${appearanceTab === 'equipment' && !isPanelMinimized ? 'active' : ''}`}
-                  onClick={() => {
-                    if (appearanceTab === 'equipment' && !isPanelMinimized) {
-                      setIsPanelMinimized(true);
-                    } else {
-                      setAppearanceTab('equipment');
-                      setIsPanelMinimized(false);
-                    }
-                  }}
-                  title="Equipment"
-                >
-                  <CheckroomIcon />
-                  <span className="sidebar-label">Equipment</span>
-                </button>
-                <button
-                  className={`sidebar-button ${appearanceTab === 'droppedBy' && !isPanelMinimized ? 'active' : ''}`}
-                  onClick={() => {
-                    if (appearanceTab === 'droppedBy' && !isPanelMinimized) {
-                      setIsPanelMinimized(true);
-                    } else {
-                      setAppearanceTab('droppedBy');
-                      setIsPanelMinimized(false);
-                    }
-                  }}
-                  title="Dropped By"
-                >
-                  <DownloadIcon />
-                  <span className="sidebar-label">Dropped By</span>
-                </button>
-              </>
-            )}
-            {activeTab === 'npcs' && (
-              <button
-                className={`sidebar-button ${npcTab === 'drops' && !isPanelMinimized ? 'active' : ''}`}
-                onClick={() => {
-                  if (npcTab === 'drops' && !isPanelMinimized) {
-                    setIsPanelMinimized(true);
-                  } else {
-                    setNpcTab('drops');
-                    setIsPanelMinimized(false);
-                  }
-                }}
-                title="Drops"
-              >
-                <DownloadIcon />
-                <span className="sidebar-label">Drops</span>
-              </button>
-            )}
-            <div className="sidebar-spacer"></div>
-            <button
-              className={`sidebar-button ${showPreview ? 'active' : ''}`}
-              onClick={() => setShowPreview(!showPreview)}
-              title="Toggle Preview"
-            >
-              <VisibilityIcon />
-              <span className="sidebar-label">Preview</span>
-            </button>
           </div>
         </div>
-        )}
-      </div>
       )}
       
       <StatusBar 
-        isLoading={isLoadingInBackground}
-        progress={loadingProgress}
-        message={loadingMessage}
+        isLoading={false}
+        progress={0}
+        message=""
       />
 
       {showSettingsModal && (
         <ProjectSettings
           projectName={projectName}
-          gfxPath={gfxFolder}
-          pubDirectory={pubDirectory}
+          serverPath={serverPath}
           theme={theme}
           toggleTheme={toggleTheme}
           onClose={() => setShowSettingsModal(false)}

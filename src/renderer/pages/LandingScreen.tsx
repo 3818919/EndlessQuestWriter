@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
-import AddIcon from '@mui/icons-material/Add';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
 import './LandingScreen.css';
 
@@ -9,74 +9,87 @@ const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
 
 interface ProjectConfig {
   name: string;
-  gfxPath: string;
+  serverPath: string;
   createdAt: string;
   lastModified: string;
 }
 
 interface LandingScreenProps {
   onSelectProject: (projectName: string) => void;
-  onCreateProject: (projectName: string, gfxPath: string, eifPath?: string, enfPath?: string, ecfPath?: string, esfPath?: string, dropsPath?: string) => void;
+  onLinkProject: (projectName: string, serverPath: string) => void;
   onDeleteProject?: (projectName: string) => void;
 }
 
 const LandingScreen: React.FC<LandingScreenProps> = ({
   onSelectProject,
-  onCreateProject,
+  onLinkProject,
   onDeleteProject
 }) => {
   const [projects, setProjects] = useState<Array<{ name: string; config: ProjectConfig }>>([]);
-  const [oaktreePath, setOaktreePath] = useState<string | null>(null);
-  const [showCreateProject, setShowCreateProject] = useState(false);
+  const [appDataPath, setAppDataPath] = useState<string | null>(null);
+  const [showLinkProject, setShowLinkProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectGfxPath, setNewProjectGfxPath] = useState('');
-  const [newProjectEifPath, setNewProjectEifPath] = useState('');
-  const [newProjectEnfPath, setNewProjectEnfPath] = useState('');
-  const [newProjectEcfPath, setNewProjectEcfPath] = useState('');
-  const [newProjectEsfPath, setNewProjectEsfPath] = useState('');
-  const [newProjectDropsPath, setNewProjectDropsPath] = useState('');
+  const [newProjectServerPath, setNewProjectServerPath] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSelecting, setIsSelecting] = useState(false);
 
-  // Initialize .oaktree directory path
+  // Initialize app data directory path
   useEffect(() => {
-    const initOaktreePath = async () => {
+    const initAppDataPath = async () => {
       if (isElectron && window.electronAPI) {
-        const cwd = await window.electronAPI.getCwd();
-        setOaktreePath(`${cwd}/.oaktree`);
+        const homeDir = await window.electronAPI.getHomeDir();
+        setAppDataPath(`${homeDir}/.endless-quest-writer`);
       }
     };
-    initOaktreePath();
+    initAppDataPath();
   }, []);
 
-  // Load projects when oaktreePath is available
+  // Load projects when appDataPath is available
   useEffect(() => {
-    if (oaktreePath && isElectron && window.electronAPI) {
+    if (appDataPath && isElectron && window.electronAPI) {
       loadProjects();
     }
-  }, [oaktreePath]);
+  }, [appDataPath]);
 
   const loadProjects = async () => {
-    if (!window.electronAPI || !oaktreePath) return;
+    if (!window.electronAPI || !appDataPath) return;
 
+    setIsLoading(true);
     try {
-      const exists = await window.electronAPI.fileExists(oaktreePath);
+      const exists = await window.electronAPI.fileExists(appDataPath);
       
       if (!exists) {
         setProjects([]);
         return;
       }
 
-      const projectDirs = await window.electronAPI.listDirectories(oaktreePath);
-      const loadedProjects = [];
+      const projectDirs = await window.electronAPI.listDirectories(appDataPath);
+      
+      if (projectDirs.length === 0) {
+        setProjects([]);
+        return;
+      }
 
-      for (const projectName of projectDirs) {
-        const configPath = `${oaktreePath}/${projectName}/config.json`;
-        const configExists = await window.electronAPI.fileExists(configPath);
+      // Build config paths for batch reading
+      const configPaths = projectDirs.map(name => `${appDataPath}/${name}/config.json`);
+      
+      // Batch read all config files at once
+      const batchResults = await window.electronAPI.readTextBatch(configPaths);
+      
+      // Parse results
+      const loadedProjects: Array<{ name: string; config: ProjectConfig }> = [];
+      
+      for (let i = 0; i < projectDirs.length; i++) {
+        const projectName = projectDirs[i];
+        const configPath = configPaths[i];
+        const result = batchResults[configPath];
         
-        if (configExists) {
-          const result = await window.electronAPI.readTextFile(configPath);
-          if (result.success) {
+        if (result?.success && result.data) {
+          try {
             const config = JSON.parse(result.data);
             loadedProjects.push({ name: projectName, config });
+          } catch (parseError) {
+            console.warn(`Failed to parse config for ${projectName}:`, parseError);
           }
         }
       }
@@ -84,114 +97,68 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
       setProjects(loadedProjects);
     } catch (error) {
       console.error('Error loading projects:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleCreateProject = async () => {
+  const handleLinkProject = async () => {
     if (!newProjectName.trim()) {
       alert('Please enter a project name');
       return;
     }
 
-    if (!newProjectGfxPath.trim()) {
-      alert('Please select a GFX folder');
+    if (!newProjectServerPath.trim()) {
+      alert('Please select a server directory');
       return;
     }
 
-    await onCreateProject(
-      newProjectName.trim(), 
-      newProjectGfxPath.trim(),
-      newProjectEifPath.trim(),
-      newProjectEnfPath.trim(),
-      newProjectEcfPath.trim(),
-      newProjectEsfPath.trim(),
-      newProjectDropsPath.trim()
-    );
-    setShowCreateProject(false);
+    // Verify the server directory contains a data/quests folder or can have one created
+    if (window.electronAPI) {
+      const questsPath = `${newProjectServerPath}/data/quests`;
+      const questsExists = await window.electronAPI.fileExists(questsPath);
+      
+      if (!questsExists) {
+        const createQuests = confirm('The selected directory does not have a "data/quests" folder. Would you like to create one?');
+        if (createQuests) {
+          await window.electronAPI.ensureDir(questsPath);
+        }
+      }
+    }
+
+    await onLinkProject(newProjectName.trim(), newProjectServerPath.trim());
+    setShowLinkProject(false);
     setNewProjectName('');
-    setNewProjectGfxPath('');
-    setNewProjectEifPath('');
-    setNewProjectEnfPath('');
-    setNewProjectEcfPath('');
-    setNewProjectEsfPath('');
-    setNewProjectDropsPath('');
-    loadProjects();
+    setNewProjectServerPath('');
+    // After linking, automatically select the project to load quests
+    await onSelectProject(newProjectName.trim());
   };
 
-  const handleSelectGfxPath = async () => {
+  const handleSelectServerPath = async () => {
     if (!window.electronAPI) return;
     
-    const folder = await window.electronAPI.openDirectory();
-    if (folder) {
-      setNewProjectGfxPath(folder);
-    }
-  };
-
-  const handleSelectEifPath = async () => {
-    if (!window.electronAPI) return;
-    
-    const file = await window.electronAPI.openFile([
-      { name: 'EIF Files', extensions: ['eif'] }
-    ]);
-    if (file) {
-      setNewProjectEifPath(file);
-    }
-  };
-
-  const handleSelectEnfPath = async () => {
-    if (!window.electronAPI) return;
-    
-    const file = await window.electronAPI.openFile([
-      { name: 'ENF Files', extensions: ['enf'] }
-    ]);
-    if (file) {
-      setNewProjectEnfPath(file);
-    }
-  };
-
-  const handleSelectEcfPath = async () => {
-    if (!window.electronAPI) return;
-    
-    const file = await window.electronAPI.openFile([
-      { name: 'ECF Files', extensions: ['ecf'] }
-    ]);
-    if (file) {
-      setNewProjectEcfPath(file);
-    }
-  };
-
-  const handleSelectEsfPath = async () => {
-    if (!window.electronAPI) return;
-    
-    const file = await window.electronAPI.openFile([
-      { name: 'ESF Files', extensions: ['esf'] }
-    ]);
-    if (file) {
-      setNewProjectEsfPath(file);
-    }
-  };
-
-  const handleSelectDropsPath = async () => {
-    if (!window.electronAPI) return;
-    
-    const file = await window.electronAPI.openFile([
-      { name: 'Text Files', extensions: ['txt'] }
-    ]);
-    if (file) {
-      setNewProjectDropsPath(file);
+    const result = await window.electronAPI.selectFolder();
+    if (result.success && result.path) {
+      setNewProjectServerPath(result.path);
+      
+      // Auto-fill project name from folder name if empty
+      if (!newProjectName.trim()) {
+        const folderName = result.path.split('/').pop() || result.path.split('\\').pop() || '';
+        setNewProjectName(folderName);
+      }
     }
   };
 
   const handleDeleteProject = async (projectName: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent project selection when clicking delete
     
-    if (!window.electronAPI || !oaktreePath) return;
+    if (!window.electronAPI || !appDataPath) return;
     
-    const confirmed = confirm(`Are you sure you want to delete project "${projectName}"?\n\nThis will delete all project files and cannot be undone.`);
+    const confirmed = confirm(`Are you sure you want to unlink project "${projectName}"?\n\nThis will only remove the project link, not your quest files.`);
     if (!confirmed) return;
     
     try {
-      const projectPath = `${oaktreePath}/${projectName}`;
+      const projectPath = `${appDataPath}/${projectName}`;
       await window.electronAPI.deleteDirectory(projectPath);
       
       if (onDeleteProject) {
@@ -200,7 +167,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
       
       // Reload projects list
       loadProjects();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting project:', error);
       alert('Error deleting project: ' + error.message);
     }
@@ -210,26 +177,50 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
     <>
       <div className="landing-screen">
         <div className="landing-content">
-          <h1 className="landing-title">OakTree</h1>
+          <h1 className="landing-title">Endless Quest Writer</h1>
           
           <p className="landing-subtitle">
-            Select a project or create a new one
+            Select a linked server or link a new one
           </p>
           
           <div className="projects-list">
-            {projects.map(({ name, config }) => (
+            {isLoading ? (
+              <div style={{ 
+                padding: '40px', 
+                textAlign: 'center', 
+                color: '#808080',
+                gridColumn: '1 / -1'
+              }}>
+                Loading projects...
+              </div>
+            ) : isSelecting ? (
+              <div style={{ 
+                padding: '40px', 
+                textAlign: 'center', 
+                color: '#808080',
+                gridColumn: '1 / -1'
+              }}>
+                Loading quests...
+              </div>
+            ) : null}
+            {!isLoading && projects.map(({ name, config }) => (
               <div 
                 key={name} 
                 className="project-card"
-                onClick={() => onSelectProject(name)}
+                onClick={async () => {
+                  setIsSelecting(true);
+                  await onSelectProject(name);
+                  setIsSelecting(false);
+                }}
+                style={{ opacity: isSelecting ? 0.6 : 1, pointerEvents: isSelecting ? 'none' : 'auto' }}
               >
                 <div className="project-icon">
-                  <InsertDriveFileIcon />
+                  <FolderOpenIcon />
                 </div>
                 <div className="project-info">
                   <div className="project-name">{config.name}</div>
                   <div className="project-details">
-                    GFX: {config.gfxPath}
+                    Server: {config.serverPath}
                   </div>
                   <div className="project-date">
                     Last modified: {new Date(config.lastModified).toLocaleDateString()}
@@ -238,32 +229,37 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                 <button 
                   className="project-delete-btn"
                   onClick={(e) => handleDeleteProject(name, e)}
-                  title="Delete project"
+                  title="Unlink project"
                 >
                   <DeleteIcon fontSize="small" />
                 </button>
               </div>
             ))}
             
+            {!isLoading && !isSelecting && (
             <div 
               className="project-card project-card-new"
-              onClick={() => setShowCreateProject(true)}
+              onClick={() => setShowLinkProject(true)}
             >
               <div className="project-icon">
-                <AddIcon />
+                <LinkIcon />
               </div>
               <div className="project-info">
-                <div className="project-name">Create New Project</div>
+                <div className="project-name">Link Server Directory</div>
+                <div className="project-details">
+                  Connect to an existing EOSERV server
+                </div>
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>
 
-      {showCreateProject && (
-        <div className="modal-overlay" onClick={() => setShowCreateProject(false)}>
+      {showLinkProject && (
+        <div className="modal-overlay" onClick={() => setShowLinkProject(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Create New Project</h2>
+            <h2>Link Server Directory</h2>
             
             <div className="form-group">
               <label>Project Name</label>
@@ -271,119 +267,27 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                 type="text"
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
-                placeholder="My Project"
+                placeholder="My Server"
                 className="form-control"
               />
             </div>
 
             <div className="form-group">
-              <label>GFX Folder Path</label>
+              <label>Server Directory</label>
+              <p className="form-help">
+                Select the root directory of your EOSERV server (contains data/, quests/, etc.)
+              </p>
               <div className="input-with-button">
                 <input
                   type="text"
-                  value={newProjectGfxPath}
-                  onChange={(e) => setNewProjectGfxPath(e.target.value)}
-                  placeholder="/path/to/gfx"
+                  value={newProjectServerPath}
+                  onChange={(e) => setNewProjectServerPath(e.target.value)}
+                  placeholder="/path/to/server"
                   className="form-control"
                   readOnly={isElectron}
                 />
                 {isElectron && (
-                  <button onClick={handleSelectGfxPath} className="btn btn-secondary">
-                    Browse
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Items File (EIF) - Optional</label>
-              <div className="input-with-button">
-                <input
-                  type="text"
-                  value={newProjectEifPath}
-                  onChange={(e) => setNewProjectEifPath(e.target.value)}
-                  placeholder="/path/to/items.eif"
-                  className="form-control"
-                  readOnly={isElectron}
-                />
-                {isElectron && (
-                  <button onClick={handleSelectEifPath} className="btn btn-secondary">
-                    Browse
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>NPCs File (ENF) - Optional</label>
-              <div className="input-with-button">
-                <input
-                  type="text"
-                  value={newProjectEnfPath}
-                  onChange={(e) => setNewProjectEnfPath(e.target.value)}
-                  placeholder="/path/to/npcs.enf"
-                  className="form-control"
-                  readOnly={isElectron}
-                />
-                {isElectron && (
-                  <button onClick={handleSelectEnfPath} className="btn btn-secondary">
-                    Browse
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Classes File (ECF) - Optional</label>
-              <div className="input-with-button">
-                <input
-                  type="text"
-                  value={newProjectEcfPath}
-                  onChange={(e) => setNewProjectEcfPath(e.target.value)}
-                  placeholder="/path/to/classes.ecf"
-                  className="form-control"
-                  readOnly={isElectron}
-                />
-                {isElectron && (
-                  <button onClick={handleSelectEcfPath} className="btn btn-secondary">
-                    Browse
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Skills File (ESF) - Optional</label>
-              <div className="input-with-button">
-                <input
-                  type="text"
-                  value={newProjectEsfPath}
-                  onChange={(e) => setNewProjectEsfPath(e.target.value)}
-                  placeholder="/path/to/skills.esf"
-                  className="form-control"
-                  readOnly={isElectron}
-                />
-                {isElectron && (
-                  <button onClick={handleSelectEsfPath} className="btn btn-secondary">
-                    Browse
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Drops File (drops.txt) - Optional</label>
-              <div className="input-with-button">
-                <input
-                  type="text"
-                  value={newProjectDropsPath}
-                  onChange={(e) => setNewProjectDropsPath(e.target.value)}
-                  placeholder="/path/to/drops.txt"
-                  className="form-control"
-                  readOnly={isElectron}
-                />
-                {isElectron && (
-                  <button onClick={handleSelectDropsPath} className="btn btn-secondary">
+                  <button onClick={handleSelectServerPath} className="btn btn-secondary">
                     Browse
                   </button>
                 )}
@@ -391,10 +295,10 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
             </div>
 
             <div className="modal-actions">
-              <button onClick={handleCreateProject} className="btn btn-primary">
-                Create Project
+              <button onClick={handleLinkProject} className="btn btn-primary">
+                Link Server
               </button>
-              <button onClick={() => setShowCreateProject(false)} className="btn btn-secondary">
+              <button onClick={() => setShowLinkProject(false)} className="btn btn-secondary">
                 Cancel
               </button>
             </div>

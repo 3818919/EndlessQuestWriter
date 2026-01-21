@@ -5,33 +5,31 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 
 interface ProjectSettingsProps {
   projectName: string;
-  gfxPath: string | null;
-  pubDirectory: string | null;
+  serverPath: string | null;
   theme: 'dark' | 'light';
   toggleTheme: () => void;
   onClose: () => void;
-  onSave: (settings: { projectName: string; gfxPath: string | null; pubDirectory: string | null }) => void;
+  onSave: (settings: { projectName: string; serverPath: string | null }) => void;
 }
 
 const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   projectName,
-  gfxPath,
-  pubDirectory,
+  serverPath,
   theme,
   toggleTheme,
   onClose,
   onSave
 }) => {
   const [name, setName] = useState(projectName);
-  const [gfx, setGfx] = useState(gfxPath);
+  const [server, setServer] = useState(serverPath);
   const [nameError, setNameError] = useState('');
 
-  const handleSelectGfxFolder = async () => {
+  const handleSelectServerFolder = async () => {
     if (!window.electronAPI) return;
     
     const result = await window.electronAPI.selectFolder();
     if (result.success && result.path) {
-      setGfx(result.path);
+      setServer(result.path);
     }
   };
 
@@ -50,8 +48,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
     onSave({
       projectName: name.trim(),
-      gfxPath: gfx,
-      pubDirectory: pubDirectory // Keep existing value, don't change it
+      serverPath: server
     });
   };
 
@@ -79,7 +76,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             </button>
           </div>
           <div className="form-help" style={{ marginTop: '4px' }}>
-            Switch between dark and light themes. This setting applies globally to the entire application.
+            Switch between dark and light themes.
           </div>
         </div>
 
@@ -102,17 +99,17 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         </div>
 
         <div className="form-group" style={{ marginTop: '20px' }}>
-          <label>GFX Folder</label>
+          <label>Server Directory</label>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <input
               type="text"
-              value={gfx || 'No folder selected'}
+              value={server || 'No folder selected'}
               readOnly
               className="form-input"
               style={{ flex: 1, cursor: 'default' }}
             />
             <button
-              onClick={handleSelectGfxFolder}
+              onClick={handleSelectServerFolder}
               className="button"
               style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
             >
@@ -121,7 +118,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             </button>
           </div>
           <div className="form-help" style={{ marginTop: '4px' }}>
-            Path to the folder containing GFX files (gfx001.egf, gfx002.egf, etc.)
+            Path to your EOSERV server directory (contains data/, quests/, etc.)
           </div>
         </div>
 

@@ -343,3 +343,9 @@
 .btn-secondary:hover {
   background: #4e4e52;
 }
+
+.form-help {
+  font-size: 0.75rem;
+  color: #808080;
+  margin-top: 0.25rem;
+}

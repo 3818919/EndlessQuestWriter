@@ -150,7 +150,7 @@ const StateNode = ({ data }: { data: any }) => {
             borderLeft: '2px solid var(--border-primary)'
           }}>
             {data.actions
-              .filter((action: any) => action.type !== 'End') // Filter out End() actions
+              .filter((action: any) => action.type !== 'End' && action.type !== 'Reset') // Filter out End() and Reset() actions
               .map((action: any, idx: number) => (
                 <div key={idx} style={{ 
                   marginBottom: '3px', 
@@ -222,9 +222,35 @@ const EndNode = () => {
   );
 };
 
+// Special Reset node component
+const ResetNode = () => {
+  return (
+    <div style={{
+      padding: '16px 24px',
+      borderRadius: '50%',
+      border: '3px solid var(--accent-warning)',
+      backgroundColor: 'var(--bg-secondary)',
+      color: 'var(--accent-warning)',
+      minWidth: '100px',
+      minHeight: '100px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      boxShadow: '0 4px 6px var(--shadow)',
+      position: 'relative',
+      fontWeight: 700,
+      fontSize: '16px'
+    }}>
+      <Handle type="target" position={Position.Top} style={{ background: 'var(--accent-warning)' }} />
+      RESET
+    </div>
+  );
+};
+
 const nodeTypes = {
   stateNode: StateNode,
-  endNode: EndNode
+  endNode: EndNode,
+  resetNode: ResetNode
 };
 
 // Helper to format action/rule display text
@@ -324,6 +350,13 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
     );
   }, [quest.states]);
 
+  // Check if any state has a Reset() action
+  const hasResetAction = useMemo(() => {
+    return quest.states.some(state => 
+      state.actions.some(action => action.type === 'Reset')
+    );
+  }, [quest.states]);
+
   // Convert quest states to nodes
   const initialNodes: Node[] = useMemo(() => {
     const nodes: Node[] = quest.states.map((state, index) => ({
@@ -359,8 +392,18 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
       });
     }
 
+    // Add Reset node if any state has Reset() action
+    if (hasResetAction) {
+      nodes.push({
+        id: '__RESET__',
+        type: 'resetNode',
+        data: {} as any,
+        position: { x: 0, y: 0 }
+      });
+    }
+
     return nodes;
-  }, [quest.states, hasEndAction, onNavigateToState, handleDeleteState]);
+  }, [quest.states, hasEndAction, hasResetAction, onNavigateToState, handleDeleteState]);
 
   // Convert rules to edges (showing which rules lead to which states)
   const initialEdges: Edge[] = useMemo(() => {
@@ -454,6 +497,29 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
               color: 'var(--accent-danger)'
             }
           });
+        } else if (action.type === 'Reset') {
+          // Create edge to Reset node
+          edges.push({
+            id: `${state.name}-action${actionIdx}-reset`,
+            source: state.name,
+            target: '__RESET__',
+            animated: true,
+            label: 'Reset',
+            style: { stroke: 'var(--accent-warning)', strokeWidth: 3 },
+            labelStyle: {
+              fill: 'var(--text-primary)',
+              fontSize: 10,
+              fontWeight: 600
+            },
+            labelBgStyle: {
+              fill: 'var(--bg-secondary)',
+              fillOpacity: 0.8
+            },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: 'var(--accent-warning)'
+            }
+          });
         }
       });
     });
@@ -490,11 +556,22 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
     }
   }, [highlightState]);
 
-  // Update nodes and edges when quest changes
+  // Update nodes and edges when quest changes, then fit view
   React.useEffect(() => {
     const { nodes: newLayoutedNodes, edges: newLayoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
     setNodes(newLayoutedNodes);
     setEdges(newLayoutedEdges);
+    
+    // Fit view after layout update with a small delay to ensure nodes are rendered
+    setTimeout(() => {
+      if (reactFlowInstance.current) {
+        reactFlowInstance.current.fitView({
+          padding: 0.2,
+          duration: 300,
+          maxZoom: 1.5
+        });
+      }
+    }, 100);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   const onConnect = useCallback(

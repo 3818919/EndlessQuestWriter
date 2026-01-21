@@ -1,0 +1,39 @@
+Main
+{
+	questname	"New Fetch Quest"
+	version		1
+}
+
+State Begin
+{
+	desc	"Talk to NPC"
+	action	AddNpcText(1, "Greetings! I need your help with a task.");
+	action	AddNpcText(1, "Can you fetch me some items? I need 5 of item #100.");
+	action	AddNpcInput(1, 1, "Sure, I can help!");
+	action	AddNpcInput(1, 2, "No, sorry.");
+	rule	InputNpc(1) goto CollectItems
+	rule	InputNpc(2) goto Begin
+}
+
+State CollectItems
+{
+	desc	"Collect 5 of Item #100"
+	action	AddNpcText(1, "Go collect the items and return to me when you have them.");
+	rule	GotItems(100, 5) goto ReturnToNPC
+}
+
+State ReturnToNPC
+{
+	desc	"Return to NPC"
+	action	AddNpcText(1, "Excellent! You have the items. Here is your reward.");
+	action	RemoveItem(100, 5);
+	rule	TalkedToNpc(1) goto Reward
+}
+
+State Reward
+{
+	desc	""
+	action	GiveExp(1000);
+	action	GiveItem(1, 500);
+	action	End();
+}

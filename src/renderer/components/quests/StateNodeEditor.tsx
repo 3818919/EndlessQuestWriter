@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QuestState, QuestAction, QuestRule } from '../../../eqf-parser';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { loadConfig, ConfigData } from '../../services/configService';
 
 interface StateNodeEditorProps {
   state: QuestState;
@@ -14,7 +15,8 @@ interface StateNodeEditorProps {
   onCreateState?: (stateName: string) => void;
 }
 
-const ACTION_TYPES = [
+// Default action/rule types if config not loaded
+const DEFAULT_ACTION_TYPES = [
   'AddNpcText', 'AddNpcInput', 'AddNpcChat', 'AddNpcPM', 'Reset', 'End', 'SetState',
   'GiveItem', 'RemoveItem', 'GiveExp', 'GiveBankItem', 'RemoveBankItem',
   'SetClass', 'SetRace', 'ShowHint', 'PlaySound', 'PlayEffect', 'PlayMusic',
@@ -23,7 +25,7 @@ const ACTION_TYPES = [
   'StartQuest', 'ResetQuest'
 ];
 
-const RULE_TYPES = [
+const DEFAULT_RULE_TYPES = [
   'Always', 'TalkedToNpc', 'InputNpc', 'KilledNpcs', 'KilledPlayers',
   'GotItems', 'LostItems', 'EnterCoord', 'LeaveCoord', 'EnterMap', 'LeaveMap',
   'EnterArea', 'LeaveArea', 'IsClass', 'IsRace', 'IsGender', 'IsNamed',
@@ -32,8 +34,8 @@ const RULE_TYPES = [
   'TimeElapsed', 'WaitMinutes', 'WaitSeconds', 'FinishedQuest', 'Disconnected'
 ];
 
-// Parameter configuration for actions
-const ACTION_PARAMS: Record<string, string[]> = {
+// Parameter configuration for actions (fallback)
+const DEFAULT_ACTION_PARAMS: Record<string, string[]> = {
   AddNpcText: ['NPC ID', 'Text to display'],
   AddNpcInput: ['NPC ID', 'Input ID', 'Text to display'],
   AddNpcChat: ['NPC ID', 'Chat message'],
@@ -67,8 +69,8 @@ const ACTION_PARAMS: Record<string, string[]> = {
   ResetQuest: ['Quest ID']
 };
 
-// Parameter configuration for rules
-const RULE_PARAMS: Record<string, string[]> = {
+// Parameter configuration for rules (fallback)
+const DEFAULT_RULE_PARAMS: Record<string, string[]> = {
   Always: [],
   TalkedToNpc: ['NPC ID'],
   InputNpc: ['Input ID'],
@@ -103,6 +105,18 @@ const RULE_PARAMS: Record<string, string[]> = {
   Disconnected: []
 };
 
+// Parse parameter names from signature like `ActionName(param1, param2)`
+function parseParamsFromSignature(signature: string): string[] {
+  const match = signature.match(/\(([^)]*)\)/);
+  if (!match || !match[1].trim()) return [];
+  
+  // Split by comma and clean up
+  return match[1].split(',').map(p => {
+    // Remove backticks, quotes, and trim
+    return p.replace(/[`"']/g, '').trim();
+  }).filter(p => p.length > 0);
+}
+
 export default function StateNodeEditor({ state, stateIndex, originalStateName, allStates, onClose, onSave, onCreateState }: StateNodeEditorProps) {
   const [editedState, setEditedState] = useState<QuestState>({
     name: state.name,
@@ -110,6 +124,45 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
     actions: [...state.actions],
     rules: [...state.rules]
   });
+  
+  const [config, setConfig] = useState<ConfigData | null>(null);
+  const [actionTypes, setActionTypes] = useState<string[]>(DEFAULT_ACTION_TYPES);
+  const [ruleTypes, setRuleTypes] = useState<string[]>(DEFAULT_RULE_TYPES);
+  const [actionParams, setActionParams] = useState<Record<string, string[]>>(DEFAULT_ACTION_PARAMS);
+  const [ruleParams, setRuleParams] = useState<Record<string, string[]>>(DEFAULT_RULE_PARAMS);
+
+  // Load config on mount
+  useEffect(() => {
+    loadConfig().then(loadedConfig => {
+      setConfig(loadedConfig);
+      
+      // Extract action types and params from config
+      if (Object.keys(loadedConfig.actions).length > 0) {
+        const types = Object.keys(loadedConfig.actions);
+        setActionTypes(types);
+        
+        // Build params from signatures
+        const params: Record<string, string[]> = {};
+        for (const [name, data] of Object.entries(loadedConfig.actions)) {
+          params[name] = parseParamsFromSignature(data.signature);
+        }
+        setActionParams(params);
+      }
+      
+      // Extract rule types and params from config
+      if (Object.keys(loadedConfig.rules).length > 0) {
+        const types = Object.keys(loadedConfig.rules);
+        setRuleTypes(types);
+        
+        // Build params from signatures
+        const params: Record<string, string[]> = {};
+        for (const [name, data] of Object.entries(loadedConfig.rules)) {
+          params[name] = parseParamsFromSignature(data.signature);
+        }
+        setRuleParams(params);
+      }
+    });
+  }, []);
 
   // Helper function to generate rawText for an action
   const generateActionRawText = (action: QuestAction): string => {
@@ -134,8 +187,8 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
   };
 
   const handleAddAction = () => {
-    const defaultType = 'AddNpcText';
-    const paramConfig = ACTION_PARAMS[defaultType] || [];
+    const defaultType = actionTypes[0] || 'AddNpcText';
+    const paramConfig = actionParams[defaultType] || [];
     const newAction = { 
       type: defaultType, 
       params: paramConfig.map(() => ''), 
@@ -161,7 +214,7 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
   const handleUpdateAction = (index: number, field: 'type' | 'params', value: any) => {
     const newActions = [...editedState.actions];
     if (field === 'type') {
-      const paramConfig = ACTION_PARAMS[value] || [];
+      const paramConfig = actionParams[value] || [];
       newActions[index] = { type: value, params: paramConfig.map(() => ''), rawText: '' };
       newActions[index].rawText = generateActionRawText(newActions[index]);
     } else {
@@ -172,8 +225,8 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
   };
 
   const handleAddRule = () => {
-    const defaultType = 'Always';
-    const paramConfig = RULE_PARAMS[defaultType] || [];
+    const defaultType = ruleTypes[0] || 'Always';
+    const paramConfig = ruleParams[defaultType] || [];
     const newRule = { 
       type: defaultType, 
       params: paramConfig.map(() => ''), 
@@ -200,7 +253,7 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
   const handleUpdateRule = (index: number, field: 'type' | 'params' | 'gotoState', value: any) => {
     const newRules = [...editedState.rules];
     if (field === 'type') {
-      const paramConfig = RULE_PARAMS[value] || [];
+      const paramConfig = ruleParams[value] || [];
       newRules[index] = { type: value, params: paramConfig.map(() => ''), gotoState: newRules[index].gotoState, rawText: '' };
       newRules[index].rawText = generateRuleRawText(newRules[index]);
     } else if (field === 'gotoState') {
@@ -231,6 +284,16 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
       newRules[index] = { ...newRules[index], params: newParams };
       newRules[index].rawText = generateRuleRawText(newRules[index]);
       setEditedState({ ...editedState, rules: newRules });
+    }
+  };
+
+  // Get description for an action or rule from config
+  const getDescription = (type: 'action' | 'rule', name: string): string | null => {
+    if (!config) return null;
+    if (type === 'action') {
+      return config.actions[name]?.description || null;
+    } else {
+      return config.rules[name]?.description || null;
     }
   };
 
@@ -390,10 +453,20 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
                       fontSize: '13px'
                     }}
                   >
-                    {ACTION_TYPES.map(type => (
+                    {actionTypes.map(type => (
                       <option key={type} value={type}>{type}</option>
                     ))}
                   </select>
+                  {getDescription('action', action.type) && (
+                    <div style={{ 
+                      fontSize: '11px', 
+                      color: 'var(--text-tertiary)', 
+                      marginTop: '4px',
+                      fontStyle: 'italic'
+                    }}>
+                      {getDescription('action', action.type)}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => handleRemoveAction(index)}
@@ -423,7 +496,7 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
                     Parameters
                   </label>
                   {action.params.map((param, paramIndex) => {
-                    const paramConfig = ACTION_PARAMS[action.type] || [];
+                    const paramConfig = actionParams[action.type] || [];
                     const placeholder = paramConfig[paramIndex] || `Parameter ${paramIndex + 1}`;
                     return (
                       <div key={paramIndex} style={{ marginBottom: '4px' }}>
@@ -529,10 +602,20 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
                       fontSize: '13px'
                     }}
                   >
-                    {RULE_TYPES.map(type => (
+                    {ruleTypes.map(type => (
                       <option key={type} value={type}>{type}</option>
                     ))}
                   </select>
+                  {getDescription('rule', rule.type) && (
+                    <div style={{ 
+                      fontSize: '11px', 
+                      color: 'var(--text-tertiary)', 
+                      marginTop: '4px',
+                      fontStyle: 'italic'
+                    }}>
+                      {getDescription('rule', rule.type)}
+                    </div>
+                  )}
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ 
@@ -613,7 +696,7 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
                     Parameters
                   </label>
                   {rule.params.map((param, paramIndex) => {
-                    const paramConfig = RULE_PARAMS[rule.type] || [];
+                    const paramConfig = ruleParams[rule.type] || [];
                     const placeholder = paramConfig[paramIndex] || `Parameter ${paramIndex + 1}`;
                     return (
                       <div key={paramIndex} style={{ marginBottom: '4px' }}>

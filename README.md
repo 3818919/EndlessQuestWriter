@@ -1,274 +1,343 @@
-# OakTree - EO Pub Editor
-
-A cross-platform visual editor for Endless Online pub files and GFX graphics, built with Electron.
-
-## ✨ Features Overview
-
-### 📝 Multi-File Editor
-Edit multiple pub file types simultaneously:
-- **Items** (.eif) - Equipment, consumables, weapons
-- **NPCs** (.enf) - Monsters and NPCs
-- **Classes** (.ecf) - Character classes
-- **Skills** (.esf) - Spells and abilities
-- **Quests** (.eqf) - Quest chains with visual editor
-- **Equipment** - Manage class equipment sets
-- **Drops** - Monster drop tables
-- **Inns** - Inn respawn locations
-
-### 🎨 Visual Features
-- **GFX Preview** - Live preview of item/NPC graphics
-- **Animated Character Preview** - See equipment on animated characters (walking/attacking)
-- **Quest Editor** - Visual node-based quest chain editor
-- **Theme Support** - Light/Dark mode
-- **Resizable Panels** - Customize your workspace
-
-### 🔧 Editor Features
-- **Search & Filter** - Quickly find items by name or ID
-- **Add/Remove/Duplicate** - Full CRUD operations
-- **Validation** - Real-time validation of data
-- **Undo/Redo** - Track changes (via git integration)
-
-### 📦 Project Management
-- **Project System** - Organize all pub files in one project
-- **Import/Export** - Individual file operations
-- **Auto-save** - Changes saved automatically
-- **Git Integration** - Built-in version control
-
-## 🎬 Feature Demos
-
-### Theme Switching
-Switch between light and dark modes for comfortable editing in any environment.
-
-![Theme Switching](recordings/light-dark-mode.gif)
-
-### Quest Editor
-Visual node-based editor for creating complex quest chains with states, rules, and actions.
-
-![Quest Editor](recordings/quest-editor.gif)
-
-### Tab Management
-Reorder tabs by dragging, and minimize side panels for more workspace.
-
-![Tab Reordering](recordings/reorder-tabs.gif)
-
-### Git Integration
-Built-in version control with staging, commits, branches, and remote operations.
-
-![Git Features](recordings/git.gif)
-
-### Workspace Customization
-Minimize left/right panels to maximize your editing space.
-
-![Minimize Menus](recordings/minimize-menus.gif)
-
-## 🚀 Installation
-
-### Prerequisites
-- Node.js 16+ and npm
-
-### Quick Start
-
-1. **Clone the repository**:
-```bash
-git clone https://github.com/yourusername/oaktree.git
-cd oaktree
-```
-
-2. **Install dependencies**:
-```bash
-npm install
-```
-
-3. **Run the application**:
-```bash
-npm start
-```
-
-## 🛠️ Development
-
-Run in development mode with hot reload and DevTools:
-```bash
-npm run dev
-```
-
-## 📦 Building
-
-Build for your current platform:
-```bash
-npm run build
-```
-
-Build for specific platforms:
-```bash
-npm run build:win    # Windows
-npm run build:mac    # macOS
-npm run build:linux  # Linux
-```
-
-## 📖 Usage Guide
-
-### Getting Started
-
-1. **Create a New Project**
-   - Click "New Project" on the landing screen
-   - Choose a project name and location
-   - Import your existing pub files (optional)
-
-2. **Open an Existing Project**
-   - Click "Open Project"
-   - Select your project's `.oaktree` folder
-
-### Working with Files
-
-1. **Items Editor**
-   - View and edit item properties (stats, requirements, metadata)
-   - Preview item graphics in static or animated mode
-   - Add, duplicate, or remove items
-
-2. **Quest Editor**
-   - Create quest chains with visual nodes
-   - Define states, rules, and actions
-   - Link quests together
-
-3. **NPC/Class/Skills Editors**
-   - Edit NPC stats and graphics
-   - Configure character classes
-   - Manage spells and abilities
-
-### Version Control (Git)
-
-1. **Initialize Repository**
-   - Click the Git icon in the left sidebar
-   - Click "Initialize Repository" for version control
-
-2. **Making Commits**
-   - Stage changed files
-   - Write a commit message
-   - Click "Commit"
-
-3. **Branch Management**
-   - Click the branch dropdown to create/switch branches
-   - Delete unused branches
-
-4. **Remote Operations**
-   - Go to Settings tab
-   - Add a remote repository URL
-   - Use Push/Pull buttons in the header
-
-### Tips & Shortcuts
-
-- **Drag tabs** to reorder them
-- **Toggle side panels** with the `<` and `>` buttons
-- **Use filters** to quickly find items
-- **Theme switching** via the theme icon in the left sidebar
-- **Stash changes** when switching between different work
-
-## 📚 Documentation
-
-For more detailed information:
-- **[Animation System](ANIMATION_SYSTEM.md)** - Character animation architecture
-- **[GFX File Reference](GFX_FILE_REFERENCE.md)** - GFX file format and resource IDs
-- **[Git Integration](GIT_INTEGRATION.md)** - Version control features
-- **[Project Specification](PROJECT_SPECIFICATION.md)** - Technical specifications
-- **[Quick Start Guide](QUICKSTART.md)** - Getting started tutorial
-
-## 🗂️ File Format Information
-
-### EIF Files
-EIF (Endless Item File) files store item data including:
-- Item names and IDs
-- Item types and subtypes
-- Stats (HP, TP, damage, armor, etc.)
-- Stat modifiers (STR, INT, WIS, AGI, CON, CHA)
-- Requirements (level, class, stats)
-- Graphics references
-- Additional metadata
-
-### GFX Files
-GFX files (`.egf`) are PE (Portable Executable) format files containing embedded bitmap resources.
-
-**Item Graphics**: Stored in `gfx023.egf`
-- Resource ID formula: `(2 * graphicId) + 100` for inventory graphics
-
-**Character Animation Graphics**:
-- `gfx008.egf`: Skin sprites (standing, walking, attacking)
-- `gfx011-012.egf`: Boots sprites (male/female)
-- `gfx013-014.egf`: Armor sprites (male/female)
-- `gfx015-016.egf`: Hat/helmet sprites (male/female)
-- `gfx017-018.egf`: Weapon sprites (male/female)
-- `gfx019-020.egf`: Back/shield items (male/female)
-
-See [GFX_FILE_REFERENCE.md](GFX_FILE_REFERENCE.md) for complete details.
-
-## 🎯 Technical Details
-
-### Architecture
-
-**Frontend**: React 18 with TypeScript
-**Backend**: Electron (Node.js)
-**Build**: Vite + electron-builder
-**Styling**: Custom CSS with theme variables
-
-### Character Animation System
-
-Multi-layered rendering system with:
-- **Z-order layering**: Back items → skin → boots → armor → weapon → shield → hair → helmet
-- **Frame-based animation**: Walking (4 frames), attacking (2 frames), standing poses
-- **Gender support**: Separate sprites and offsets for male/female characters
-- **Zoom support**: 1x-4x zoom with pixel-perfect scaling
-
-See [ANIMATION_SYSTEM.md](ANIMATION_SYSTEM.md) for architecture details.
-
-For detailed information about the animation system, see [ANIMATION_SYSTEM.md](ANIMATION_SYSTEM.md).
-
-## Project Structure
-
-```
-eo-pub-editor/
-├── src/
-│   ├── main.js              # Electron main process
-│   ├── preload.js           # Preload script for IPC
-│   ├── eif-parser.js        # EIF file parser
-│   ├── gfx-loader.js        # GFX file loader
-│   ├── animation/           # Character animation system
-│   │   ├── character-animator.js  # Main animator class
-│   │   ├── constants.js           # Enums and constants
-│   │   ├── offsets.js             # Equipment offset tables
-│   │   ├── sprite-loader.js       # Sprite loading utilities
-│   │   └── renderer.js            # Canvas rendering functions
-│   └── renderer/
-│       ├── index.html       # Main UI
-│       ├── styles.css       # Styling
-│       └── app.js           # Application logic
-├── package.json
-└── README.md
-```
-
-## Technical Details
-
-### Number Encoding
-EO files use a custom number encoding scheme:
-- 254 represents 1
-- 0 represents 254
-- Numbers are encoded in base-253
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to:
-- Report bugs via GitHub Issues
-- Suggest features or improvements
-- Submit pull requests
-
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## 🙏 Credits
-
-- File format specifications from [EndlessClient](https://github.com/ethanmoffat/EndlessClient)
-- Built with [Electron](https://www.electronjs.org/) and [React](https://react.dev/)
-- Icons from [game-icons.net](https://game-icons.net/) (CC BY 3.0)
+<p align="center">
+  <img src="icon.png" alt="Endless Quest Writer" width="128" height="128">
+</p>
+
+<h1 align="center">Endless Quest Writer</h1>
+
+<p align="center">
+  <strong>A visual editor for Endless Online quest files (.eqf)</strong>
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#configuration">Configuration</a> •
+  <a href="#credits">Credits</a> •
+  <a href="#license">License</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue" alt="Platform">
+  <img src="https://img.shields.io/badge/electron-28.0.0-47848F?logo=electron" alt="Electron">
+  <img src="https://img.shields.io/badge/react-18-61DAFB?logo=react" alt="React">
+  <img src="https://img.shields.io/badge/typescript-5.3-3178C6?logo=typescript" alt="TypeScript">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+</p>
 
 ---
 
-**OakTree** - A modern, feature-rich editor for Endless Online content creation
+> **Note**: This project is a fork of [OakTree](https://github.com/do4k/OakTree) by CoderDan, modified to focus specifically on quest editing functionality.
+
+---
+
+## Features
+
+### 🎨 Visual Quest Editor
+- **Node-Based Flow Diagram** — Design quest flows visually with drag-and-drop states
+- **Auto-Layout** — Automatic graph layout using the Dagre algorithm
+- **State Management** — Create, edit, and delete quest states with ease
+- **Visual Connections** — See rule transitions between states at a glance
+- **Click-to-Edit** — Double-click any state node to edit its properties
+
+### 📝 Text Editor
+- **Monaco Editor** — Professional code editor with syntax highlighting
+- **EQF Language Support** — Custom syntax highlighting for quest files
+- **Auto-Completion** — IntelliSense for actions and rules
+- **Go-to Navigation** — Click state references to jump to definitions
+- **Split View** — Edit in both visual and text modes simultaneously
+
+### 📋 Quest Management
+- **Quest List** — Browse and search all quests in your project
+- **Quick Create** — Create new quests with custom ID, name, and version
+- **Templates** — Start from pre-built quest templates (Fetch, Kill, Delivery, etc.)
+- **Duplicate** — Clone existing quests as a starting point
+- **Import/Export** — Import external `.eqf` files or export quests
+
+### ⚙️ Quest Properties
+- **Metadata Editor** — Edit quest name, version, and hidden status
+- **Auto-Save** — Changes save automatically when using the visual editor
+- **Manual Save** — Save button for explicit control
+
+### 🔧 Customization
+- **External Config Files** — Actions and rules defined in editable `.ini` files
+- **Custom Templates** — Add your own quest templates as `.eqf` files
+- **User Directory** — Config files stored in `~/.endless-quest-writer/config/`
+- **Hot Reload** — Changes take effect on next application launch
+
+### 🎯 Project System
+- **Server Linking** — Link directly to your game server's directory
+- **Auto-Discovery** — Automatically finds quests in `data/quests/`
+- **5-Digit Naming** — Quest files use standard naming (`00001.eqf` to `99999.eqf`)
+- **Multiple Projects** — Switch between different server directories
+
+### 🌙 User Experience
+- **Dark/Light Theme** — Toggle between themes in settings
+- **Responsive Layout** — Works on various screen sizes
+- **Keyboard Shortcuts** — Quick save with Ctrl+S
+- **Status Indicators** — See last saved time and quest statistics
+
+---
+
+## Installation
+
+### Prerequisites
+- [Node.js](https://nodejs.org/) 16+ and npm
+
+### From Source
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/endless-quest-writer.git
+cd endless-quest-writer
+
+# Install dependencies
+npm install
+
+# Run in development mode
+npm run dev
+```
+
+### Pre-built Releases
+
+Download the latest release for your platform from the [Releases](https://github.com/your-username/endless-quest-writer/releases) page:
+
+- **Windows**: `.exe` installer
+- **macOS**: `.dmg` disk image
+- **Linux**: `.AppImage` portable application
+
+---
+
+## Usage
+
+### Getting Started
+
+1. **Launch the Application**
+2. **Link a Server Directory** — Click "Link Server Directory" and select your game server's root folder
+3. **Browse Quests** — Your existing quests will appear in the left panel
+4. **Create or Edit** — Select a quest to edit or click "New Quest" to create one
+
+### Editor Modes
+
+| Mode | Description |
+|------|-------------|
+| **Visual** | Node-based flow diagram editor (default) |
+| **Split** | Side-by-side visual and text editors |
+| **Text** | Full-screen Monaco text editor |
+
+### Creating a New Quest
+
+1. Click the **+ New Quest** button
+2. Enter a **Quest ID** (1-99999, next available is suggested)
+3. Enter a **Quest Name**
+4. Set the **Version** number
+5. Optionally mark as **Hidden**
+6. Click **Create Quest**
+
+### Using Templates
+
+1. Open a quest in Visual or Split mode
+2. Click the **Load Template...** dropdown
+3. Select a template (Fetch Quest, Kill Quest, etc.)
+4. The template will replace the current quest content
+
+---
+
+## Configuration
+
+On first launch, default configuration files are copied to your user directory:
+
+| Platform | Location |
+|----------|----------|
+| Linux | `~/.endless-quest-writer/config/` |
+| macOS | `~/.endless-quest-writer/config/` |
+| Windows | `C:\Users\<username>\.endless-quest-writer\config\` |
+
+### actions.ini
+
+Define available quest actions:
+
+```ini
+[AddNpcText]
+signature = `AddNpcText(npcQuestId, "message")`
+description = Displays dialog text from an NPC in the quest dialog window.
+
+[GiveItem]
+signature = `GiveItem(itemId, amount)`
+description = Gives the player a specified amount of an item.
+```
+
+### rules.ini
+
+Define available quest rules:
+
+```ini
+[TalkedToNpc]
+signature = `TalkedToNpc(npcQuestId)`
+description = Satisfied when the player talks to the specified NPC.
+
+[GotItems]
+signature = `GotItems(itemId, amount)`
+description = Satisfied when the player has the specified items.
+```
+
+### templates/
+
+Add custom quest templates as `.eqf` files:
+
+```
+~/.endless-quest-writer/config/templates/
+├── Delivery Quest.eqf
+├── Empty Quest.eqf
+├── Fetch Quest.eqf
+├── Kill Quest.eqf
+└── My Custom Quest.eqf    ← Your custom template
+```
+
+The filename (without `.eqf`) becomes the template name in the dropdown.
+
+---
+
+## Server Directory Structure
+
+The editor expects your game server to have this structure:
+
+```
+server/
+├── data/
+│   └── quests/
+│       ├── 00001.eqf
+│       ├── 00002.eqf
+│       ├── 00003.eqf
+│       └── ...
+└── ...
+```
+
+---
+
+## Quest File Format (EQF)
+
+Quest files use the EQF format:
+
+```
+Main
+{
+    questname "My Quest Name"
+    version 1
+}
+
+State Begin
+{
+    desc "Starting state description"
+    action AddNpcText(1, "Hello, adventurer!");
+    action ShowHint("Talk to the NPC to begin.");
+    rule TalkedToNpc(1) goto QuestAccepted
+}
+
+State QuestAccepted
+{
+    desc "Player accepted the quest"
+    action AddNpcText(1, "Bring me 5 apples.");
+    action SetQuestState("Collect 5 Apples");
+    rule GotItems(100, 5) goto QuestComplete
+}
+
+State QuestComplete
+{
+    desc "Quest completion"
+    action AddNpcText(1, "Thank you!");
+    action RemoveItem(100, 5);
+    action GiveExp(500);
+    action End();
+}
+```
+
+---
+
+## Building
+
+Build distributable packages for each platform:
+
+```bash
+# Build for current platform
+npm run build
+
+# Build for specific platforms
+npm run build:win    # Windows (.exe)
+npm run build:mac    # macOS (.dmg)
+npm run build:linux  # Linux (.AppImage)
+```
+
+Output files are placed in the `build/` directory.
+
+---
+
+## Technology Stack
+
+| Technology | Purpose |
+|------------|---------|
+| [Electron](https://www.electronjs.org/) | Desktop application framework |
+| [React 18](https://react.dev/) | UI framework |
+| [TypeScript](https://www.typescriptlang.org/) | Type-safe JavaScript |
+| [Monaco Editor](https://microsoft.github.io/monaco-editor/) | Code editor component |
+| [React Flow](https://reactflow.dev/) | Node-based diagram editor |
+| [Dagre](https://github.com/dagrejs/dagre) | Graph auto-layout algorithm |
+| [Vite](https://vitejs.dev/) | Build tool |
+| [electron-builder](https://www.electron.build/) | Application packaging |
+
+---
+
+## Credits
+
+### Original Project
+
+**[OakTree](https://github.com/do4k/OakTree)** — A comprehensive Endless Online pub editor
+
+Created by **CoderDan** ([@do4k](https://github.com/do4k))
+
+### Quest Editor Fork
+
+**Endless Quest Writer** — Focused quest editing with enhanced visual tools
+
+Modified by **Vexx** — [vexx.info](https://vexx.info/)
+
+### Additional Credits
+
+- Icons from [Material UI](https://mui.com/material-ui/material-icons/)
+
+---
+
+## License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+```
+MIT License
+
+Copyright (c) 2024 CoderDan (Original OakTree)
+Copyright (c) 2024 Vexx (Endless Quest Writer modifications)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
+
+<p align="center">
+  Made with ❤️ for the Endless Online community
+</p>

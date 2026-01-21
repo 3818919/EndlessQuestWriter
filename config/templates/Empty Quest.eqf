@@ -1,0 +1,13 @@
+Main
+{
+	questname	"New Quest"
+	version		1
+}
+
+State Begin
+{
+	desc	"Quest start"
+	action	AddNpcText(1, "Hello! How can I help you?");
+	action	AddNpcInput(1, 1, "Tell me more.");
+	rule	TalkedToNpc(1) goto Begin
+}

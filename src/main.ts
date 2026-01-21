@@ -2,10 +2,9 @@
 const { app, BrowserWindow, ipcMain, dialog, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
-const { BMPConverter } = require('./bmp-converter');
 
 // Set app name before ready event
-app.setName('OakTree');
+app.setName('Endless Quest Writer');
 
 let mainWindow;
 
@@ -36,7 +35,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    title: 'OakTree',
+    title: 'Endless Quest Writer',
     icon: icon,
     webPreferences: {
       nodeIntegration: false,
@@ -112,7 +111,7 @@ ipcMain.handle('dialog:openFile', async (event, filters) => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
     filters: filters || [
-      { name: 'Item Files', extensions: ['eif'] },
+      { name: 'Quest Files', extensions: ['eqf'] },
       { name: 'All Files', extensions: ['*'] }
     ]
   });
@@ -126,7 +125,7 @@ ipcMain.handle('dialog:openFile', async (event, filters) => {
 ipcMain.handle('dialog:openDirectory', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory'],
-    title: 'Select GFX Folder'
+    title: 'Select Directory'
   });
 
   if (!result.canceled && result.filePaths.length > 0) {
@@ -139,7 +138,7 @@ ipcMain.handle('dialog:saveFile', async (event, defaultPath, filters) => {
   const result = await dialog.showSaveDialog(mainWindow, {
     defaultPath: defaultPath,
     filters: filters || [
-      { name: 'Item Files', extensions: ['eif'] },
+      { name: 'Quest Files', extensions: ['eqf'] },
       { name: 'All Files', extensions: ['*'] }
     ]
   });
@@ -186,33 +185,6 @@ ipcMain.handle('file:writeText', async (event, filePath, text) => {
   }
 });
 
-ipcMain.handle('file:readGFX', async (event, gfxPath, gfxNumber) => {
-  try {
-    // Format: gfx001.egf, gfx002.egf, etc.
-    const fileName = `gfx${String(gfxNumber).padStart(3, '0')}.egf`;
-    const filePath = path.join(gfxPath, fileName);
-    const data = await fs.readFile(filePath);
-    return { success: true, data: Array.from(data) };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('file:listGFXFiles', async (event, gfxPath) => {
-  try {
-    const files = await fs.readdir(gfxPath);
-    const gfxFiles = files
-      .filter(f => f.match(/^gfx\d{3}\.egf$/i))
-      .map(f => {
-        const match = f.match(/gfx(\d{3})\.egf/i);
-        return parseInt(match[1], 10);
-      })
-      .sort((a, b) => a - b);
-    return { success: true, files: gfxFiles };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
 ipcMain.handle('path:join', async (event, ...paths) => {
   return path.join(...paths);
 });
@@ -322,98 +294,167 @@ ipcMain.handle('dialog:selectFolder', async () => {
   }
 });
 
-// Preload all GFX files in the background with progress updates
-ipcMain.handle('file:preloadAllGFX', async (event, gfxPath) => {
+// Select file dialog
+ipcMain.handle('dialog:selectFile', async (event, options) => {
   try {
-    // List all GFX files
-    const files = await fs.readdir(gfxPath);
-    const gfxFiles = files
-      .filter(f => f.match(/^gfx\d{3}\.egf$/i))
-      .map(f => {
-        const match = f.match(/gfx(\d{3})\.egf/i);
-        return {
-          number: parseInt(match[1], 10),
-          fileName: f
-        };
-      })
-      .sort((a, b) => a.number - b.number);
-
-    const total = gfxFiles.length;
-    const cache = new Map();
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: options?.filters || [
+        { name: 'Quest Files', extensions: ['eqf'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
     
-    // Load files one by one and send progress updates
-    for (let i = 0; i < gfxFiles.length; i++) {
-      const gfxFile = gfxFiles[i];
-      const filePath = path.join(gfxPath, gfxFile.fileName);
-      
-      try {
-        const data = await fs.readFile(filePath);
-        cache.set(gfxFile.number, Array.from(data));
-        
-        // Send progress update
-        const progress = ((i + 1) / total) * 100;
-        event.sender.send('gfx:loadProgress', {
-          current: i + 1,
-          total,
-          progress,
-          fileName: gfxFile.fileName
-        });
-      } catch (error) {
-        console.error(`Error loading ${gfxFile.fileName}:`, error);
-        // Continue loading other files even if one fails
-      }
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, error: 'No file selected' };
     }
-
-    return { 
-      success: true, 
-      filesLoaded: cache.size,
-      total: gfxFiles.length
-    };
+    
+    return { success: true, path: result.filePaths[0] };
   } catch (error) {
-    console.error('Error preloading GFX files:', error);
+    console.error('Error selecting file:', error);
     return { success: false, error: error.message };
   }
 });
 
-// Convert BMP buffer to PNG data URL (server-side)
-ipcMain.handle('file:convertBitmapToPNG', async (event, bitmapData) => {
+// List files in a directory with optional extension filter
+ipcMain.handle('file:listFiles', async (event, dirPath, extension) => {
   try {
-    const startTime = performance.now();
-    const bmpBuffer = Buffer.from(bitmapData);
-    const dataUrl = await BMPConverter.convertToDataURL(bmpBuffer);
-    const endTime = performance.now();
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    let files = entries
+      .filter(entry => entry.isFile())
+      .map(entry => entry.name);
     
-    if (endTime - startTime > 50) {
-      console.log(`⏱️  Server-side BMP conversion: ${(endTime - startTime).toFixed(2)}ms`);
+    // Filter by extension if provided
+    if (extension) {
+      const ext = extension.startsWith('.') ? extension : `.${extension}`;
+      files = files.filter(f => f.toLowerCase().endsWith(ext.toLowerCase()));
     }
     
-    return { success: true, dataUrl };
+    return { success: true, files };
   } catch (error) {
-    console.error('Error converting BMP:', error);
+    return { success: false, error: error.message, files: [] };
+  }
+});
+
+// Read multiple text files at once (batch operation)
+ipcMain.handle('file:readTextBatch', async (event, filePaths) => {
+  const results = {};
+  
+  await Promise.all(filePaths.map(async (filePath) => {
+    try {
+      const data = await fs.readFile(filePath, 'utf-8');
+      results[filePath] = { success: true, data };
+    } catch (error) {
+      results[filePath] = { success: false, error: error.message };
+    }
+  }));
+  
+  return results;
+});
+
+// Delete a single file
+ipcMain.handle('file:deleteFile', async (event, filePath) => {
+  try {
+    await fs.unlink(filePath);
+    return { success: true };
+  } catch (error) {
     return { success: false, error: error.message };
   }
 });
 
-// Execute shell command
-ipcMain.handle('shell:runCommand', async (event, command) => {
-  const { exec } = require('child_process');
-  const util = require('util');
-  const execPromise = util.promisify(exec);
+// Get the user config directory path (external, editable by user)
+ipcMain.handle('path:getConfigDir', async () => {
+  const isDev = process.argv.includes('--dev');
+  if (isDev) {
+    // In development, use the project's config folder
+    return path.join(process.cwd(), 'config');
+  } else {
+    // In production, use user's home directory for editable config
+    const homeDir = app.getPath('home');
+    const userConfigDir = path.join(homeDir, '.endless-quest-writer', 'config');
+    return userConfigDir;
+  }
+});
+
+// Get the bundled config directory path (read-only defaults inside AppImage)
+ipcMain.handle('path:getBundledConfigDir', async () => {
+  const isDev = process.argv.includes('--dev');
+  if (isDev) {
+    return path.join(process.cwd(), 'config');
+  } else {
+    // In production, bundled config is in the resources folder
+    return path.join((process as any).resourcesPath || path.dirname(app.getPath('exe')), 'config');
+  }
+});
+
+// Initialize user config directory by copying defaults if needed
+ipcMain.handle('config:initialize', async () => {
+  const isDev = process.argv.includes('--dev');
+  if (isDev) {
+    // In dev mode, just use the project config directly
+    return { success: true, configDir: path.join(process.cwd(), 'config') };
+  }
+  
+  const homeDir = app.getPath('home');
+  const userConfigDir = path.join(homeDir, '.endless-quest-writer', 'config');
+  const bundledConfigDir = path.join((process as any).resourcesPath || path.dirname(app.getPath('exe')), 'config');
   
   try {
-    const { stdout, stderr } = await execPromise(command, {
-      maxBuffer: 10 * 1024 * 1024 // 10MB buffer
-    });
-    return { 
-      stdout: stdout || '', 
-      stderr: stderr || '', 
-      exitCode: 0 
-    };
+    // Create user config directory if it doesn't exist
+    await fs.mkdir(userConfigDir, { recursive: true });
+    
+    // Copy actions.ini if it doesn't exist
+    const actionsPath = path.join(userConfigDir, 'actions.ini');
+    try {
+      await fs.access(actionsPath);
+    } catch {
+      const bundledActionsPath = path.join(bundledConfigDir, 'actions.ini');
+      try {
+        const content = await fs.readFile(bundledActionsPath, 'utf-8');
+        await fs.writeFile(actionsPath, content, 'utf-8');
+      } catch (e) {
+        console.log('Could not copy bundled actions.ini:', e.message);
+      }
+    }
+    
+    // Copy rules.ini if it doesn't exist
+    const rulesPath = path.join(userConfigDir, 'rules.ini');
+    try {
+      await fs.access(rulesPath);
+    } catch {
+      const bundledRulesPath = path.join(bundledConfigDir, 'rules.ini');
+      try {
+        const content = await fs.readFile(bundledRulesPath, 'utf-8');
+        await fs.writeFile(rulesPath, content, 'utf-8');
+      } catch (e) {
+        console.log('Could not copy bundled rules.ini:', e.message);
+      }
+    }
+    
+    // Create templates directory and copy default templates if it doesn't exist
+    const templatesDir = path.join(userConfigDir, 'templates');
+    try {
+      await fs.access(templatesDir);
+    } catch {
+      await fs.mkdir(templatesDir, { recursive: true });
+      
+      // Copy all template files from bundled config
+      const bundledTemplatesDir = path.join(bundledConfigDir, 'templates');
+      try {
+        const files = await fs.readdir(bundledTemplatesDir);
+        for (const file of files) {
+          if (file.endsWith('.eqf')) {
+            const content = await fs.readFile(path.join(bundledTemplatesDir, file), 'utf-8');
+            await fs.writeFile(path.join(templatesDir, file), content, 'utf-8');
+          }
+        }
+      } catch (e) {
+        console.log('Could not copy bundled templates:', e.message);
+      }
+    }
+    
+    return { success: true, configDir: userConfigDir };
   } catch (error) {
-    return { 
-      stdout: error.stdout || '', 
-      stderr: error.stderr || error.message, 
-      exitCode: error.code || 1 
-    };
+    return { success: false, error: error.message, configDir: userConfigDir };
   }
 });
