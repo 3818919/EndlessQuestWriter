@@ -88,7 +88,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/endless-quest-writer.git
+git clone https://github.com/3818919/EndlessQuestEditor.git
 cd endless-quest-writer
 
 # Install dependencies
@@ -100,7 +100,7 @@ npm run dev
 
 ### Pre-built Releases
 
-Download the latest release for your platform from the [Releases](https://github.com/your-username/endless-quest-writer/releases) page:
+Download the latest release for your platform from the [Releases](https://github.com/3818919/EndlessQuestEditor/releases) page:
 
 - **Windows**: `.exe` installer
 - **macOS**: `.dmg` disk image
