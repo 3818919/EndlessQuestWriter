@@ -12,13 +12,10 @@
   "include": [
     "src/main.ts",
     "src/preload.ts",
-    "src/gfx-loader.ts",
-    "src/eif-parser.ts",
-    "src/bmp-converter.ts"
+    "src/eqf-parser.ts"
   ],
   "exclude": [
     "node_modules",
-    "src/renderer",
-    "src/animation"
+    "src/renderer"
   ]
 }
