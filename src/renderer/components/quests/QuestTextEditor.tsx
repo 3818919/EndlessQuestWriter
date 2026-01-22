@@ -22,50 +22,61 @@ export default function QuestTextEditor({ quest, onSave, navigateToState, onNavi
   const hoverProvidersRef = useRef<any[]>([]);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastQuestIdRef = useRef<number | null>(null);
-  const isInternalSaveRef = useRef(false);
+  const lastSerializedTextRef = useRef<string>('');
+  const handleSaveRef = useRef<() => void>(() => {});
+  const isOwnSaveRef = useRef(false);
 
-  // Load config on mount
+  
   useEffect(() => {
     loadConfig().then(setConfig);
   }, []);
 
-  // Initialize EQF text from quest data - only when quest ID changes (different quest selected)
   useEffect(() => {
-    // Skip if this is our own save triggering a re-render
-    if (isInternalSaveRef.current) {
-      isInternalSaveRef.current = false;
+    if (isOwnSaveRef.current) {
+      isOwnSaveRef.current = false;
       return;
     }
-    
-    // Only reload text when switching to a different quest
-    if (quest.id !== lastQuestIdRef.current) {
-      lastQuestIdRef.current = quest.id;
-      
-      // Cancel any pending auto-save when switching quests
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-        autoSaveTimerRef.current = null;
-      }
-      
-      try {
-        const text = EQFParser.serialize(quest);
-        setEqfText(text);
+    const isNewQuest = quest.id !== lastQuestIdRef.current;
+    if (isNewQuest && autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+    try {
+      const serializedText = EQFParser.serialize(quest);
+      const textChanged = serializedText !== lastSerializedTextRef.current;
+      if (isNewQuest || (textChanged && !hasChanges)) {
+        
+        const cursorPosition = editorRef.current?.getPosition();
+        const scrollTop = editorRef.current?.getScrollTop();
+        
+        lastQuestIdRef.current = quest.id;
+        lastSerializedTextRef.current = serializedText;
+        setEqfText(serializedText);
         setError(null);
         setHasChanges(false);
-      } catch (err) {
-        setError(`Failed to serialize quest: ${err}`);
+        if (cursorPosition && !isNewQuest) {
+          setTimeout(() => {
+            if (editorRef.current) {
+              editorRef.current.setPosition(cursorPosition);
+              if (scrollTop !== undefined) {
+                editorRef.current.setScrollTop(scrollTop);
+              }
+            }
+          }, 0);
+        }
       }
+    } catch (err) {
+      setError(`Failed to serialize quest: ${err}`);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quest.id]);
+  }, [quest, hasChanges]);
 
-  // Save function
+  
   const handleSave = useCallback(() => {
     if (!hasChanges) return;
-
     try {
       const parsedQuest = EQFParser.parse(eqfText, quest.id);
-      isInternalSaveRef.current = true; // Mark this as an internal save
+      lastSerializedTextRef.current = EQFParser.serialize(parsedQuest);
+      isOwnSaveRef.current = true;
       onSave(parsedQuest);
       setHasChanges(false);
       setError(null);
@@ -74,7 +85,10 @@ export default function QuestTextEditor({ quest, onSave, navigateToState, onNavi
     }
   }, [hasChanges, eqfText, quest.id, onSave]);
 
-  // Auto-save text changes every 5 seconds after user stops typing
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+  }, [handleSave]);
+
   useEffect(() => {
     if (hasChanges) {
       if (autoSaveTimerRef.current) {
@@ -83,7 +97,7 @@ export default function QuestTextEditor({ quest, onSave, navigateToState, onNavi
       
       autoSaveTimerRef.current = setTimeout(() => {
         handleSave();
-      }, 5000); // 5 seconds auto-save delay
+      }, 1500); 
     }
     
     return () => {
@@ -93,7 +107,7 @@ export default function QuestTextEditor({ quest, onSave, navigateToState, onNavi
     };
   }, [hasChanges, eqfText, handleSave]);
 
-  // Navigate to a specific state when requested
+  
   useEffect(() => {
     if (navigateToState && editorRef.current && eqfText) {
       const lines = eqfText.split('\n');
@@ -125,21 +139,19 @@ export default function QuestTextEditor({ quest, onSave, navigateToState, onNavi
               }
             }, 2000);
           }
-          
           break;
         }
       }
     }
   }, [navigateToState, eqfText]);
 
-  // Update Monaco theme when app theme changes
+  
   useEffect(() => {
     if (monacoRef.current) {
       monacoRef.current.editor.setTheme(theme === 'light' ? 'eqf-light' : 'eqf-dark');
     }
   }, [theme]);
 
-  // Cleanup hover providers on unmount
   useEffect(() => {
     return () => {
       hoverProvidersRef.current.forEach(disposable => {
@@ -155,21 +167,15 @@ export default function QuestTextEditor({ quest, onSave, navigateToState, onNavi
     editorRef.current = editor;
     monacoRef.current = monaco;
     
-    // Clean up any previously registered hover providers
+    
     hoverProvidersRef.current.forEach(disposable => {
       if (disposable && disposable.dispose) {
         disposable.dispose();
       }
     });
     hoverProvidersRef.current = [];
-    
-    // Register EQF language with config-based keywords
     registerEQFLanguage(monaco, config);
-    
-    // Set theme based on app theme
     monaco.editor.setTheme(theme === 'light' ? 'eqf-light' : 'eqf-dark');
-
-    // Register hover provider for action and rule documentation
     const docsHoverProvider = monaco.languages.registerHoverProvider(EQF_LANGUAGE_ID, {
       provideHover: (model, position) => {
         if (!config) return null;
@@ -200,13 +206,9 @@ export default function QuestTextEditor({ quest, onSave, navigateToState, onNavi
       }
     });
     hoverProvidersRef.current.push(docsHoverProvider);
-
-    // Add save shortcut (Ctrl+S / Cmd+S)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      handleSave();
+      handleSaveRef.current();
     });
-
-    // Helper function to navigate to a state
     const navigateToStateInEditor = (stateName: string) => {
       const text = editor.getValue();
       const lines = text.split('\n');
@@ -242,7 +244,7 @@ export default function QuestTextEditor({ quest, onSave, navigateToState, onNavi
       return false;
     };
 
-    // Handle Ctrl/Cmd+Click on goto statements
+    
     editor.onMouseDown((e: any) => {
       if (!e.event.ctrlKey && !e.event.metaKey) return;
       
@@ -272,7 +274,7 @@ export default function QuestTextEditor({ quest, onSave, navigateToState, onNavi
       }
     });
 
-    // Add visual indication for goto statements
+    
     const updateGotoDecorations = () => {
       const model = editor.getModel();
       if (!model) return;

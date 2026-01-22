@@ -18,16 +18,12 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
-  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
   const [templateName, setTemplateName] = useState('');
   const [description, setDescription] = useState('');
   const [actions, setActions] = useState<QuestAction[]>([]);
   const [rules, setRules] = useState<QuestRule[]>([]);
-  
-  // State editor dialog
   const [stateEditorOpen, setStateEditorOpen] = useState(false);
   const [currentState, setCurrentState] = useState<QuestState>({
     name: 'TemplateState',
@@ -36,7 +32,7 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
     rules: []
   });
   
-  // Load templates on mount
+  
   useEffect(() => {
     loadTemplatesData();
   }, []);
@@ -57,7 +53,7 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
   
   const handleOpenDialog = (templateFileName?: string) => {
     if (templateFileName && templates[templateFileName]) {
-      // Editing existing template - open state editor directly
+      
       const template = templates[templateFileName];
       setEditingTemplate(templateFileName);
       setTemplateName(templateFileName.replace('.eqf', ''));
@@ -70,7 +66,7 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
       });
       setStateEditorOpen(true);
     } else {
-      // Adding new template - show dialog first
+      
       setEditingTemplate(null);
       setTemplateName('');
       setDescription('');
@@ -104,16 +100,14 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
   };
   
   const handleSaveStateEditor = async (updates: Partial<QuestState>, nameChanged: boolean, oldName: string) => {
-    // If we're editing an existing template, save it
+    
     if (editingTemplate) {
       try {
-        // Get config directory
+        
         const configDir = await window.electronAPI.getConfigDir();
         const statesDir = `${configDir}/templates/states`;
         const templateFileName = `${templateName}.eqf`;
         const templatePath = `${statesDir}/${templateFileName}`;
-        
-        // Generate template content from updated state
         let content = `desc "${updates.description || ''}"\n`;
         
         (updates.actions || []).forEach(action => {
@@ -124,13 +118,8 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
           content += `rule ${rule.rawText}\n`;
         });
         
-        // Ensure states directory exists
         await window.electronAPI.ensureDir(statesDir);
-        
-        // Write template file
         await window.electronAPI.writeTextFile(templatePath, content.trim());
-        
-        // Clear cache and reload
         await loadTemplatesData();
         
         setSuccessMessage('Template updated successfully!');
@@ -139,7 +128,7 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
         console.error('Error saving template:', err);
       }
     } else {
-      // If we're creating a new template, update the form fields
+      
       setDescription(updates.description || '');
       setActions(updates.actions || []);
       setRules(updates.rules || []);
@@ -147,7 +136,7 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
     
     setStateEditorOpen(false);
     
-    // If we were creating a new template, show the dialog to set the name
+    
     if (!editingTemplate) {
       setDialogOpen(true);
     }
@@ -179,22 +168,15 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
     }
     
     try {
-      // Get config directory
+      
       const configDir = await window.electronAPI.getConfigDir();
       const statesDir = `${configDir}/templates/states`;
       const templateFileName = `${templateName}.eqf`;
       const templatePath = `${statesDir}/${templateFileName}`;
-      
-      // Generate template content
       const content = generateStateTemplateContent();
-      
-      // Ensure states directory exists
+
       await window.electronAPI.ensureDir(statesDir);
-      
-      // Write template file
       await window.electronAPI.writeTextFile(templatePath, content);
-      
-      // Clear cache and reload
       await loadTemplatesData();
       
       setSuccessMessage(editingTemplate ? 'Template updated successfully!' : 'Template added successfully!');
@@ -216,8 +198,6 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
       const templatePath = `${statesDir}/${templateFileName}`;
       
       await window.electronAPI.deleteFile(templatePath);
-      
-      // Clear cache and reload
       await loadTemplatesData();
       
       setSuccessMessage('Template deleted successfully!');
@@ -297,35 +277,14 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
                   {fileName.replace('.eqf', '')}
                 </Typography>
                 <Typography variant="body2" gutterBottom sx={{ color: 'var(--text-secondary)' }}>
-                  <strong>Description:</strong> {template.description}
+                  <strong>Description:</strong> {template.description || '(No description)'}
                 </Typography>
                 <Typography variant="body2" gutterBottom sx={{ color: 'var(--text-secondary)' }}>
                   <strong>Actions:</strong> {template.actions.length}
                 </Typography>
-                <Typography variant="body2" gutterBottom sx={{ color: 'var(--text-secondary)' }}>
+                <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
                   <strong>Rules:</strong> {template.rules.length}
                 </Typography>
-                <Box sx={{ mt: 1 }}>
-                  {template.actions.slice(0, 3).map((action, index) => (
-                    <Typography 
-                      key={index} 
-                      variant="caption" 
-                      component="div" 
-                      sx={{ 
-                        fontFamily: 'monospace',
-                        color: 'var(--text-tertiary)',
-                        fontSize: '10px'
-                      }}
-                    >
-                      {action.rawText}
-                    </Typography>
-                  ))}
-                  {template.actions.length > 3 && (
-                    <Typography variant="caption" sx={{ color: 'var(--text-tertiary)' }}>
-                      ...and {template.actions.length - 3} more
-                    </Typography>
-                  )}
-                </Box>
               </CardContent>
               <CardActions>
                 <Tooltip title="Edit">

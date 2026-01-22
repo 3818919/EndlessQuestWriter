@@ -4,29 +4,29 @@ const path = require('path');
 const fs = require('fs').promises;
 const { appUpdater } = require('./updater');
 
-// Set app name before ready event
+
 app.setName('Endless Quest Writer');
 
 let mainWindow;
 let splashWindow;
 
 function createSplashWindow() {
-  // Determine icon path based on dev/prod mode and platform
+  
   const isDev = process.argv.includes('--dev');
   let iconPath;
   
   if (process.platform === 'darwin') {
-    // Use ICNS for macOS
+    
     iconPath = isDev 
       ? path.join(process.cwd(), 'assets', 'icon.icns')
       : path.join(__dirname, '..', 'assets', 'icon.icns');
   } else if (process.platform === 'win32') {
-    // Use ICO for Windows
+    
     iconPath = isDev 
       ? path.join(process.cwd(), 'assets', 'icon.ico')
       : path.join(__dirname, '..', 'assets', 'icon.ico');
   } else {
-    // Use PNG for Linux
+    
     iconPath = isDev 
       ? path.join(process.cwd(), 'assets', 'icon.png')
       : path.join(__dirname, '..', 'assets', 'icon.png');
@@ -49,7 +49,7 @@ function createSplashWindow() {
     }
   });
 
-  // Load splash screen HTML
+  
   const splashHtml = `
     <!DOCTYPE html>
     <html>
@@ -190,7 +190,7 @@ function createSplashWindow() {
       </div>
       
       <script>
-        // Listen for updates from main process
+        
         window.electronAPI.onUpdateStatus((status, progress) => {
           document.getElementById('status').textContent = status;
           if (progress >= 0) {
@@ -213,22 +213,22 @@ function createSplashWindow() {
 }
 
 function createWindow() {
-  // Determine icon path based on dev/prod mode and platform
+  
   const isDev = process.argv.includes('--dev');
   let iconPath;
   
   if (process.platform === 'darwin') {
-    // Use ICNS for macOS
+    
     iconPath = isDev 
       ? path.join(process.cwd(), 'assets', 'icon.icns')
       : path.join(__dirname, '..', 'assets', 'icon.icns');
   } else if (process.platform === 'win32') {
-    // Use ICO for Windows
+    
     iconPath = isDev 
       ? path.join(process.cwd(), 'assets', 'icon.ico')
       : path.join(__dirname, '..', 'assets', 'icon.ico');
   } else {
-    // Use PNG for Linux
+    
     iconPath = isDev 
       ? path.join(process.cwd(), 'assets', 'icon.png')
       : path.join(__dirname, '..', 'assets', 'icon.png');
@@ -241,7 +241,7 @@ function createWindow() {
     height: 900,
     title: 'Endless Quest Writer',
     icon: icon,
-    show: false, // Don't show until ready
+    show: false, 
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -249,7 +249,7 @@ function createWindow() {
     }
   });
 
-  // Set Content Security Policy
+  
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -263,9 +263,9 @@ function createWindow() {
     });
   });
 
-  // Load Vite dev server in development, built files in production
+  
   if (isDev) {
-    // Wait a moment for Vite to be ready, then try common ports
+    
     setTimeout(() => {
       mainWindow.loadURL('http://localhost:5174').catch(() => {
         mainWindow.loadURL('http://localhost:5175').catch(() => {
@@ -277,12 +277,12 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
   }
 
-  // Open DevTools in development
+  
   if (isDev) {
     mainWindow.webContents.openDevTools();
   }
 
-  // Show main window when ready
+  
   mainWindow.once('ready-to-show', () => {
     if (splashWindow) {
       splashWindow.close();
@@ -292,21 +292,21 @@ function createWindow() {
   });
 }
 
-// Function to update splash screen status
+
 function updateSplashStatus(status, progress = -1) {
   if (splashWindow && !splashWindow.isDestroyed()) {
     splashWindow.webContents.send('update-status', status, progress);
   }
 }
 
-// Initialize app with update check
+
 async function initializeApp() {
   const isDev = process.argv.includes('--dev');
   
   try {
     updateSplashStatus('Checking for updates...', 10);
     
-    // Skip update check in development mode
+    
     if (isDev) {
       updateSplashStatus('Starting application...', 90);
       setTimeout(() => {
@@ -318,24 +318,24 @@ async function initializeApp() {
       return;
     }
 
-    // Check for updates
+    
     const updateResult = await appUpdater.checkForUpdatesOnStartup();
     
     if (updateResult.hasUpdate && updateResult.updateInfo) {
       updateSplashStatus('Update available! Downloading...', 30);
       
-      // Set up progress listener
+      
       appUpdater.on('download-progress', (progressObj) => {
-        const progress = 30 + (progressObj.percent * 0.6); // 30% to 90%
+        const progress = 30 + (progressObj.percent * 0.6); 
         updateSplashStatus(`Downloading update... ${Math.round(progressObj.percent)}%`, progress);
       });
       
-      // Download and install update
+      
       try {
         await appUpdater.downloadAndInstallUpdate(updateResult.updateInfo);
         updateSplashStatus('Update downloaded! Restarting...', 100);
         
-        // Wait a moment then restart
+        
         setTimeout(() => {
           appUpdater.quitAndInstall();
         }, 1500);
@@ -348,7 +348,7 @@ async function initializeApp() {
         }, 1000);
       }
     } else {
-      // No update available, continue with normal startup
+      
       updateSplashStatus('Starting application...', 90);
       setTimeout(() => {
         updateSplashStatus('Ready!', 100);
@@ -368,7 +368,7 @@ async function initializeApp() {
 }
 
 app.whenReady().then(async () => {
-  // Set dock icon for macOS
+  
   if (process.platform === 'darwin') {
     const isDev = process.argv.includes('--dev');
     const iconPath = isDev 
@@ -380,13 +380,13 @@ app.whenReady().then(async () => {
     }
   }
 
-  // Show splash screen first
+  
   createSplashWindow();
   
-  // Set up updater
+  
   appUpdater.setMainWindow(splashWindow);
   
-  // Start update check and app initialization
+  
   await initializeApp();
 
   app.on('activate', () => {
@@ -402,7 +402,7 @@ app.on('window-all-closed', () => {
   }
 });
 
-// IPC Handlers
+
 ipcMain.handle('dialog:openFile', async (event, filters) => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
@@ -551,7 +551,7 @@ ipcMain.handle('file:deleteDirectory', async (event, dirPath) => {
   }
 });
 
-// Check if path exists
+
 ipcMain.handle('file:pathExists', async (event, filePath) => {
   try {
     await fs.access(filePath);
@@ -561,7 +561,7 @@ ipcMain.handle('file:pathExists', async (event, filePath) => {
   }
 });
 
-// Rename file or directory
+
 ipcMain.handle('file:rename', async (event, oldPath, newPath) => {
   try {
     await fs.rename(oldPath, newPath);
@@ -572,7 +572,7 @@ ipcMain.handle('file:rename', async (event, oldPath, newPath) => {
   }
 });
 
-// Select folder dialog
+
 ipcMain.handle('dialog:selectFolder', async () => {
   try {
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -590,7 +590,7 @@ ipcMain.handle('dialog:selectFolder', async () => {
   }
 });
 
-// Select file dialog
+
 ipcMain.handle('dialog:selectFile', async (event, options) => {
   try {
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -612,7 +612,7 @@ ipcMain.handle('dialog:selectFile', async (event, options) => {
   }
 });
 
-// List files in a directory with optional extension filter
+
 ipcMain.handle('file:listFiles', async (event, dirPath, extension) => {
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -620,7 +620,7 @@ ipcMain.handle('file:listFiles', async (event, dirPath, extension) => {
       .filter(entry => entry.isFile())
       .map(entry => entry.name);
     
-    // Filter by extension if provided
+    
     if (extension) {
       const ext = extension.startsWith('.') ? extension : `.${extension}`;
       files = files.filter(f => f.toLowerCase().endsWith(ext.toLowerCase()));
@@ -632,7 +632,7 @@ ipcMain.handle('file:listFiles', async (event, dirPath, extension) => {
   }
 });
 
-// Read multiple text files at once (batch operation)
+
 ipcMain.handle('file:readTextBatch', async (event, filePaths) => {
   const results = {};
   
@@ -648,7 +648,7 @@ ipcMain.handle('file:readTextBatch', async (event, filePaths) => {
   return results;
 });
 
-// Delete a single file
+
 ipcMain.handle('file:deleteFile', async (event, filePath) => {
   try {
     await fs.unlink(filePath);
@@ -658,36 +658,36 @@ ipcMain.handle('file:deleteFile', async (event, filePath) => {
   }
 });
 
-// Get the user config directory path (external, editable by user)
+
 ipcMain.handle('path:getConfigDir', async () => {
   const isDev = process.argv.includes('--dev');
   if (isDev) {
-    // In development, use the project's config folder
+    
     return path.join(process.cwd(), 'config');
   } else {
-    // In production, use user's home directory for editable config
+    
     const homeDir = app.getPath('home');
     const userConfigDir = path.join(homeDir, '.endless-quest-writer', 'config');
     return userConfigDir;
   }
 });
 
-// Get the bundled config directory path (read-only defaults inside AppImage)
+
 ipcMain.handle('path:getBundledConfigDir', async () => {
   const isDev = process.argv.includes('--dev');
   if (isDev) {
     return path.join(process.cwd(), 'config');
   } else {
-    // In production, bundled config is in the resources folder
+    
     return path.join((process as any).resourcesPath || path.dirname(app.getPath('exe')), 'config');
   }
 });
 
-// Initialize user config directory by copying defaults if needed
+
 ipcMain.handle('config:initialize', async () => {
   const isDev = process.argv.includes('--dev');
   if (isDev) {
-    // In dev mode, just use the project config directly
+    
     return { success: true, configDir: path.join(process.cwd(), 'config') };
   }
   
@@ -696,10 +696,10 @@ ipcMain.handle('config:initialize', async () => {
   const bundledConfigDir = path.join((process as any).resourcesPath || path.dirname(app.getPath('exe')), 'config');
   
   try {
-    // Create user config directory if it doesn't exist
+    
     await fs.mkdir(userConfigDir, { recursive: true });
     
-    // Copy actions.ini if it doesn't exist
+    
     const actionsPath = path.join(userConfigDir, 'actions.ini');
     try {
       await fs.access(actionsPath);
@@ -713,7 +713,7 @@ ipcMain.handle('config:initialize', async () => {
       }
     }
     
-    // Copy rules.ini if it doesn't exist
+    
     const rulesPath = path.join(userConfigDir, 'rules.ini');
     try {
       await fs.access(rulesPath);
@@ -727,11 +727,11 @@ ipcMain.handle('config:initialize', async () => {
       }
     }
     
-    // Create templates directory and ensure default templates exist
+    
     const templatesDir = path.join(userConfigDir, 'templates');
     await fs.mkdir(templatesDir, { recursive: true });
     
-    // Copy all template files from bundled config (overwrite if missing)
+    
     const bundledTemplatesDir = path.join(bundledConfigDir, 'templates');
     try {
       const files = await fs.readdir(bundledTemplatesDir);
@@ -741,10 +741,10 @@ ipcMain.handle('config:initialize', async () => {
           const bundledTemplatePath = path.join(bundledTemplatesDir, file);
           
           try {
-            // Check if file exists in user directory
+            
             await fs.access(userTemplatePath);
           } catch {
-            // File doesn't exist in user directory, copy it
+            
             try {
               const content = await fs.readFile(bundledTemplatePath, 'utf-8');
               await fs.writeFile(userTemplatePath, content, 'utf-8');
@@ -759,11 +759,11 @@ ipcMain.handle('config:initialize', async () => {
       console.log('Could not access bundled templates directory:', e.message);
     }
     
-    // Create templates/states directory and ensure state templates exist
+    
     const statesDir = path.join(userConfigDir, 'templates', 'states');
     await fs.mkdir(statesDir, { recursive: true });
     
-    // Copy all state template files from bundled config (overwrite if missing)
+    
     const bundledStatesDir = path.join(bundledConfigDir, 'templates', 'states');
     try {
       const files = await fs.readdir(bundledStatesDir);
@@ -773,10 +773,10 @@ ipcMain.handle('config:initialize', async () => {
           const bundledStatePath = path.join(bundledStatesDir, file);
           
           try {
-            // Check if file exists in user directory
+            
             await fs.access(userStatePath);
           } catch {
-            // File doesn't exist in user directory, copy it
+            
             try {
               const content = await fs.readFile(bundledStatePath, 'utf-8');
               await fs.writeFile(userStatePath, content, 'utf-8');
@@ -797,12 +797,12 @@ ipcMain.handle('config:initialize', async () => {
   }
 });
 
-// Get app version
+
 ipcMain.handle('app:getVersion', () => {
   return app.getVersion();
 });
 
-// Check for updates manually
+
 ipcMain.handle('updater:checkForUpdates', async () => {
   try {
     const result = await appUpdater.checkForUpdatesOnStartup();
@@ -812,10 +812,10 @@ ipcMain.handle('updater:checkForUpdates', async () => {
   }
 });
 
-// Download and install update
+
 ipcMain.handle('updater:downloadAndInstall', async () => {
   try {
-    // This will be handled by the updater events
+    
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };

@@ -1,11 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { EQFParser, QuestData, QuestAction, QuestRule } from '../../eqf-parser';
 
-// Actions that use npcQuestId as first parameter
 const NPC_QUEST_ID_ACTIONS = ['AddNpcText', 'AddNpcInput', 'AddNpcChat', 'AddNpcPM'];
 const NPC_QUEST_ID_RULES = ['TalkedToNpc'];
 
-// Helper function to replace placeholder npcQuestId (1) with actual quest ID
 function replaceNpcQuestIds(quest: QuestData, questId: number): QuestData {
   return {
     ...quest,
@@ -75,12 +73,12 @@ export const useProject = (): UseProjectReturn => {
   const [serverPath, setServerPath] = useState('');
   const [appDataDir, setAppDataDir] = useState('');
   
-  // Cache for loaded quest IDs to avoid re-scanning
+
   const questIdsCache = useRef<Set<number>>(new Set());
 
   const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
 
-  // Initialize app data directory on mount
+
   useEffect(() => {
     const initializeAppDataDir = async () => {
       if (isElectron && window.electronAPI) {
@@ -97,7 +95,7 @@ export const useProject = (): UseProjectReturn => {
     return serverPath ? `${serverPath}/data/quests` : '';
   }, [serverPath]);
 
-  // Optimized: Load all quests using directory listing and batch read
+
   const loadAllQuests = useCallback(async (): Promise<Record<number, QuestData>> => {
     if (!serverPath || !window.electronAPI) return {};
 
@@ -105,7 +103,7 @@ export const useProject = (): UseProjectReturn => {
     const quests: Record<number, QuestData> = {};
     
     try {
-      // List all .eqf files in one call
+    
       const listResult = await window.electronAPI.listFiles(questsDir, '.eqf');
       
       if (!listResult.success || listResult.files.length === 0) {
@@ -113,7 +111,7 @@ export const useProject = (): UseProjectReturn => {
         return {};
       }
 
-      // Extract quest IDs from filenames and build file paths
+    
       const questFiles: { id: number; path: string }[] = [];
       for (const filename of listResult.files) {
         const match = filename.match(/^(\d+)\.eqf$/i);
@@ -128,11 +126,11 @@ export const useProject = (): UseProjectReturn => {
         return {};
       }
 
-      // Batch read all quest files at once
+    
       const filePaths = questFiles.map(q => q.path);
       const batchResults = await window.electronAPI.readTextBatch(filePaths);
 
-      // Parse all quests
+    
       for (const { id, path } of questFiles) {
         const result = batchResults[path];
         if (result?.success && result.data) {
@@ -145,7 +143,7 @@ export const useProject = (): UseProjectReturn => {
         }
       }
 
-      // Update cache
+    
       questIdsCache.current = new Set(Object.keys(quests).map(Number));
       console.log(`Loaded ${Object.keys(quests).length} quests`);
       
@@ -198,7 +196,7 @@ export const useProject = (): UseProjectReturn => {
     try {
       const projectFolder = `${appDataDir}/${projectName}`;
       
-      // Load config
+    
       const configPath = `${projectFolder}/config.json`;
       const configResult = await window.electronAPI.readTextFile(configPath);
       if (!configResult.success) {
@@ -207,22 +205,22 @@ export const useProject = (): UseProjectReturn => {
       
       const config: ProjectConfig = JSON.parse(configResult.data);
       
-      // Update state first so loadAllQuests can use serverPath
+    
       setCurrentProject(projectFolder);
       setProjectName(projectName);
       setServerPath(config.serverPath);
       localStorage.setItem('currentProject', projectName);
       
-      // Update window title
+    
       await window.electronAPI.setTitle(`Quest Editor - ${projectName}`);
       
-      // Load quests using optimized batch loading
+    
       const questsDir = `${config.serverPath}/data/quests`;
       const questsDirExists = await window.electronAPI.fileExists(questsDir);
       
       let quests: Record<number, QuestData> = {};
       if (questsDirExists) {
-        // Use the optimized loading with the config's serverPath directly
+      
         const listResult = await window.electronAPI.listFiles(questsDir, '.eqf');
         
         if (listResult.success && listResult.files.length > 0) {
@@ -294,7 +292,7 @@ export const useProject = (): UseProjectReturn => {
     if (settings.serverPath !== undefined) {
       config.serverPath = settings.serverPath;
       setServerPath(settings.serverPath);
-      questIdsCache.current = new Set(); // Clear cache when server path changes
+      questIdsCache.current = new Set();
     }
     
     config.lastModified = new Date().toISOString();
@@ -325,12 +323,12 @@ export const useProject = (): UseProjectReturn => {
     }
   }, [appDataDir, currentProject]);
 
-  // Optimized: Find next available ID using cached IDs
+
   const findNextQuestId = useCallback(async (): Promise<number> => {
     const questsDir = getQuestsPath();
     if (!questsDir || !window.electronAPI) return 1;
 
-    // If cache is empty, refresh it
+  
     if (questIdsCache.current.size === 0) {
       const listResult = await window.electronAPI.listFiles(questsDir, '.eqf');
       if (listResult.success) {
@@ -343,7 +341,7 @@ export const useProject = (): UseProjectReturn => {
       }
     }
 
-    // Find first available ID
+  
     let nextId = 1;
     while (questIdsCache.current.has(nextId)) {
       nextId++;
@@ -361,7 +359,7 @@ export const useProject = (): UseProjectReturn => {
     
     const nextId = questData.id;
 
-    // Check if quest already exists
+  
     if (questIdsCache.current.has(nextId)) {
       throw new Error(`Quest ${nextId} already exists`);
     }
@@ -372,7 +370,7 @@ export const useProject = (): UseProjectReturn => {
       const templates = await loadTemplates();
       const template = templates[templateName];
         if (template) {
-        // Replace npcQuestId placeholders with the quest ID
+      
         newQuest = replaceNpcQuestIds({ 
           ...template, 
           id: nextId,
@@ -384,7 +382,7 @@ export const useProject = (): UseProjectReturn => {
           throw new Error(`Template "${templateName}" not found`);
         }
       } else {
-      // Create default quest with npcQuestId set to quest ID
+    
         newQuest = {
           id: nextId,
         questName: questData.name,
@@ -428,7 +426,7 @@ export const useProject = (): UseProjectReturn => {
         throw new Error(`Failed to save quest: ${writeResult.error}`);
       }
 
-    // Update cache
+  
     questIdsCache.current.add(nextId);
     
       return nextId;
@@ -473,7 +471,7 @@ export const useProject = (): UseProjectReturn => {
       throw new Error(`Failed to delete quest: ${result.error}`);
     }
 
-    // Update cache
+  
     questIdsCache.current.delete(questId);
   }, [serverPath, getQuestsPath]);
 
@@ -494,7 +492,7 @@ export const useProject = (): UseProjectReturn => {
     const questsDir = getQuestsPath();
     await window.electronAPI.ensureDir(questsDir);
 
-    // If no ID from filename or ID already exists, find next available
+  
     if (!questId || questIdsCache.current.has(questId)) {
       questId = await findNextQuestId();
     }

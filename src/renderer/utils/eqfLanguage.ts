@@ -1,6 +1,3 @@
-// Monaco Editor Language Definition for EQF (EO Quest Files)
-// Based on cirras.eoplus VSCode extension
-
 import { ConfigData } from '../services/configService';
 
 export const EQF_LANGUAGE_ID = 'eqf';
@@ -25,7 +22,6 @@ export const eqfLanguageConfig = {
   ],
 };
 
-// Default actions/rules if config not loaded (matches config/actions.ini and config/rules.ini)
 const DEFAULT_ACTIONS = [
   'AddNpcText', 'AddNpcInput', 'AddNpcChat', 'AddNpcPM', 'Roll', 'GiveItem', 'RemoveItem',
   'GiveExp', 'ShowHint', 'PlaySound', 'SetCoord', 'Quake', 'QuakeWorld', 'SetClass',
@@ -41,7 +37,6 @@ const DEFAULT_RULES = [
   'StatRpn', 'DoneDaily', 'Always'
 ];
 
-// Default stats for syntax highlighting
 const DEFAULT_STATS = [
   'level', 'exp', 'str', 'int', 'wis', 'agi', 'con', 'cha',
   'statpoints', 'skillpoints', 'admin', 'gender', 'hairstyle',
@@ -49,16 +44,12 @@ const DEFAULT_STATS = [
 ];
 
 function createTokensProvider(actions: string[], rules: string[]) {
-  // Create regex patterns for actions and rules
-  // These will match the function names followed by opening parenthesis
   const actionsPattern = actions.length > 0 
     ? new RegExp(`\\b(${actions.join('|')})(?=\\s*\\()`)
-    : /(?!)/; // Never match if no actions
-  
+    : /(?!)/; 
   const rulesPattern = rules.length > 0
     ? new RegExp(`\\b(${rules.join('|')})(?=\\s*\\()`)
-    : /(?!)/; // Never match if no rules
-
+    : /(?!)/; 
   return {
     keywords: [
       'Main', 'State', 'random', 'action', 'rule', 'goto', 'desc',
@@ -71,43 +62,25 @@ function createTokensProvider(actions: string[], rules: string[]) {
     
     operators: [',', ';'],
     
-    // Stat keywords
+    
     stats: DEFAULT_STATS,
 
     tokenizer: {
       root: [
-        // Comments
-        [/\/\/.*$/, 'comment'],
         
-        // Keywords (case-insensitive)
+        [/\/\/.*$/, 'comment'],
         [/\b(?:state)\b/i, 'keyword.state'],
         [/\b(?:Main|random)\b/i, 'keyword.control'],
         [/\b(?:action|rule|goto|desc|coord|item)\b/i, 'keyword'],
         [/\b(?:questname|version|hidden|hidden_end|disabled|minlevel|maxlevel|needadmin|adminreq|needclass|classreq|needquest|questreq|startnpc)\b/i, 'keyword.declaration'],
-        
-        // Actions - explicitly match action names from config
         [actionsPattern, 'support.function.action'],
-        
-        // Rules - explicitly match rule names from config
         [rulesPattern, 'support.function.rule'],
-        
-        // Stats - dynamically create pattern from DEFAULT_STATS
         [new RegExp(`\\b(?:${DEFAULT_STATS.join('|')})\\b`, 'i'), 'variable.language'],
-        
-        // Strings
         [/"([^"\\]|\\.)*$/, 'string.invalid'],
         [/"/, 'string', '@string'],
-        
-        // Numbers
         [/\b\d+\.?\d*\b/, 'number'],
-        
-        // Operators
         [/[,;]/, 'delimiter'],
-        
-        // Brackets
         [/[{}()]/, '@brackets'],
-        
-        // Identifiers (state names, random names, etc.)
         [/[a-zA-Z_]\w*/, 'identifier'],
       ],
       
@@ -121,25 +94,16 @@ function createTokensProvider(actions: string[], rules: string[]) {
 }
 
 export function registerEQFLanguage(monaco: any, config?: ConfigData | null) {
-  // Get actions and rules from config or use defaults
+  
   const actions = config ? Object.keys(config.actions) : DEFAULT_ACTIONS;
   const rules = config ? Object.keys(config.rules) : DEFAULT_RULES;
-  
-  // Register language
   monaco.languages.register({ id: EQF_LANGUAGE_ID });
-  
-  // Set language configuration
   monaco.languages.setLanguageConfiguration(EQF_LANGUAGE_ID, eqfLanguageConfig);
-  
-  // Set tokens provider with dynamic actions/rules
   monaco.languages.setMonarchTokensProvider(EQF_LANGUAGE_ID, createTokensProvider(actions, rules));
-  
-  // Register completion provider for actions and rules
   monaco.languages.registerCompletionItemProvider(EQF_LANGUAGE_ID, {
     provideCompletionItems: (model: any, position: any) => {
       const suggestions: any[] = [];
       
-      // Add action completions
       actions.forEach(action => {
         const doc = config?.actions[action];
         suggestions.push({
@@ -152,7 +116,6 @@ export function registerEQFLanguage(monaco: any, config?: ConfigData | null) {
         });
       });
       
-      // Add rule completions
       rules.forEach(rule => {
         const doc = config?.rules[rule];
         suggestions.push({
@@ -169,7 +132,6 @@ export function registerEQFLanguage(monaco: any, config?: ConfigData | null) {
     }
   });
   
-  // Define dark theme
   monaco.editor.defineTheme('eqf-dark', {
     base: 'vs-dark',
     inherit: true,
@@ -199,7 +161,6 @@ export function registerEQFLanguage(monaco: any, config?: ConfigData | null) {
     }
   });
 
-  // Define light theme
   monaco.editor.defineTheme('eqf-light', {
     base: 'vs',
     inherit: true,

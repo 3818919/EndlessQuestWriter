@@ -34,21 +34,17 @@ const GenericList: React.FC<GenericListProps> = ({
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to selected item when requested
   useEffect(() => {
-    if (scrollToSelected && selectedId !== null && scrollContainerRef.current) {
-      // Find the selected item element by its data-item-id attribute
+    if (scrollToSelected && selectedId !== null && scrollContainerRef.current) {    
       const selectedElement = scrollContainerRef.current.querySelector(`[data-item-id="${selectedId}"]`) as HTMLElement;
       
-      if (selectedElement) {
-        // Calculate the position to center the item in the viewport
+      if (selectedElement) {      
         const container = scrollContainerRef.current;
         const itemTop = selectedElement.offsetTop;
         const itemHeight = selectedElement.offsetHeight;
         const containerHeight = container.clientHeight;
         const scrollPosition = itemTop - (containerHeight / 2) + (itemHeight / 2);
-        
-        // Smooth scroll to the calculated position
+              
         container.scrollTo({
           top: scrollPosition,
           behavior: 'smooth'

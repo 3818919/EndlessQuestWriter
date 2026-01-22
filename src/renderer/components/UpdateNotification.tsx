@@ -33,8 +33,7 @@ export default function UpdateNotification({ onUpdateCheck }: UpdateNotification
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [checking, setChecking] = useState(false);
-
-  // Check for updates on component mount
+ 
   useEffect(() => {
     checkForUpdates();
   }, []);
@@ -69,12 +68,9 @@ export default function UpdateNotification({ onUpdateCheck }: UpdateNotification
     setDownloading(true);
     setDownloadProgress(0);
     
-    try {
-      // Start download
+    try {     
       await window.electronAPI.downloadAndInstall();
-      
-      // The app will restart automatically when download completes
-      // This is handled by the main process
+                
       
     } catch (error) {
       console.error('Error downloading update:', error);

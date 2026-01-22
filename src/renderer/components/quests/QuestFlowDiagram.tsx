@@ -27,7 +27,7 @@ interface QuestFlowDiagramProps {
   highlightState?: string | null;
 }
 
-// Custom node component for quest states
+
 const StateNode = ({ data }: { data: any }) => {
   const handleOpenInEditor = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -103,7 +103,7 @@ const StateNode = ({ data }: { data: any }) => {
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
-        paddingRight: '24px' // Make room for delete button
+        paddingRight: '24px' 
       }}>
         <span>{data.label}</span>
         <button
@@ -149,7 +149,7 @@ const StateNode = ({ data }: { data: any }) => {
             borderLeft: '2px solid var(--border-primary)'
           }}>
             {data.actions
-              .filter((action: any) => action.type !== 'End' && action.type !== 'Reset') // Filter out End() and Reset() actions
+              .filter((action: any) => action.type !== 'End' && action.type !== 'Reset') 
               .map((action: any, idx: number) => (
                 <div key={idx} style={{ 
                   marginBottom: '3px', 
@@ -196,7 +196,7 @@ const StateNode = ({ data }: { data: any }) => {
   );
 };
 
-// Special End node component
+
 const EndNode = () => {
   return (
     <div style={{
@@ -221,7 +221,7 @@ const EndNode = () => {
   );
 };
 
-// Special Reset node component
+
 const ResetNode = () => {
   return (
     <div style={{
@@ -252,7 +252,7 @@ const nodeTypes = {
   resetNode: ResetNode
 };
 
-// Helper to format action/rule display text
+
 const formatActionDisplay = (action: any): string => {
   const paramStr = action.params.map((p: any) => 
     typeof p === 'string' ? `"${p}"` : p
@@ -267,14 +267,14 @@ const formatRuleDisplay = (rule: any): string => {
   return `${rule.type}(${paramStr})`;
 };
 
-// Auto-layout using dagre
+
 const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   dagreGraph.setGraph({ rankdir: 'TB', nodesep: 100, ranksep: 150 });
 
   nodes.forEach((node) => {
-    // Calculate dynamic node height based on content
+    
     const baseHeight = 80;
     const actionCount = typeof node.data.actionCount === 'number' ? node.data.actionCount : 0;
     const ruleCount = typeof node.data.ruleCount === 'number' ? node.data.ruleCount : 0;
@@ -309,25 +309,25 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToState, highlightState }: QuestFlowDiagramProps) {
   const [editingState, setEditingState] = useState<{ state: QuestState; index: number } | null>(null);
 
-  // Handler to delete a state
+  
   const handleDeleteState = useCallback((stateIndex: number) => {
     const newStates = [...quest.states];
     const deletedStateName = newStates[stateIndex].name;
     
-    // Remove the state
+    
     newStates.splice(stateIndex, 1);
     
-    // Clean up references to the deleted state in remaining states
+    
     newStates.forEach((state, idx) => {
-      // Remove rules that reference the deleted state
+      
       const updatedRules = state.rules.filter(rule => rule.gotoState !== deletedStateName);
       
-      // Remove SetState/Goto actions that reference the deleted state
+      
       const updatedActions = state.actions.filter(action => {
         if ((action.type === 'SetState' || action.type === 'Goto') && 
             action.params.length > 0 && 
             action.params[0] === deletedStateName) {
-          return false; // Remove this action
+          return false; 
         }
         return true;
       });
@@ -342,21 +342,21 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
     onQuestChange({ states: newStates });
   }, [quest.states, onQuestChange]);
 
-  // Check if any state has an End() action
+  
   const hasEndAction = useMemo(() => {
     return quest.states.some(state => 
       state.actions.some(action => action.type === 'End')
     );
   }, [quest.states]);
 
-  // Check if any state has a Reset() action
+  
   const hasResetAction = useMemo(() => {
     return quest.states.some(state => 
       state.actions.some(action => action.type === 'Reset')
     );
   }, [quest.states]);
 
-  // Convert quest states to nodes
+  
   const initialNodes: Node[] = useMemo(() => {
     const nodes: Node[] = quest.states.map((state, index) => ({
       id: state.name,
@@ -381,7 +381,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
       position: { x: 0, y: 0 }
     }));
 
-    // Add End node if any state has End() action
+    
     if (hasEndAction) {
       nodes.push({
         id: '__END__',
@@ -391,7 +391,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
       });
     }
 
-    // Add Reset node if any state has Reset() action
+    
     if (hasResetAction) {
       nodes.push({
         id: '__RESET__',
@@ -404,18 +404,18 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
     return nodes;
   }, [quest.states, hasEndAction, hasResetAction, onNavigateToState, handleDeleteState]);
 
-  // Convert rules to edges (showing which rules lead to which states)
+  
   const initialEdges: Edge[] = useMemo(() => {
     const edges: Edge[] = [];
     
     quest.states.forEach((state) => {
-      // Create edges from rules
+      
       state.rules.forEach((rule, ruleIdx) => {
         const targetState = rule.gotoState;
         
-        // Check if target state exists
+        
         if (quest.states.some(s => s.name === targetState)) {
-          // Determine edge style based on rule type
+          
           const isConditional = rule.type !== 'Always';
           
           edges.push({
@@ -446,7 +446,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
         }
       });
       
-      // Also handle SetState and Goto actions
+      
       state.actions.forEach((action, actionIdx) => {
         if ((action.type === 'SetState' || action.type === 'Goto') && action.params.length > 0) {
           const targetState = action.params[0] as string;
@@ -474,7 +474,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
             });
           }
         } else if (action.type === 'End') {
-          // Create edge to End node
+          
           edges.push({
             id: `${state.name}-action${actionIdx}-end`,
             source: state.name,
@@ -497,7 +497,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
             }
           });
         } else if (action.type === 'Reset') {
-          // Create edge to Reset node
+          
           edges.push({
             id: `${state.name}-action${actionIdx}-reset`,
             source: state.name,
@@ -535,12 +535,12 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
 
-  // Callback when React Flow is initialized
+  
   const onInit = useCallback((instance: ReactFlowInstance) => {
     reactFlowInstance.current = instance;
   }, []);
 
-  // Zoom to highlighted state
+  
   useEffect(() => {
     if (highlightState && reactFlowInstance.current) {
       const node = reactFlowInstance.current.getNode(highlightState);
@@ -555,13 +555,13 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
     }
   }, [highlightState]);
 
-  // Update nodes and edges when quest changes, then fit view
+  
   React.useEffect(() => {
     const { nodes: newLayoutedNodes, edges: newLayoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
     setNodes(newLayoutedNodes);
     setEdges(newLayoutedEdges);
     
-    // Fit view after layout update with a small delay to ensure nodes are rendered
+    
     setTimeout(() => {
       if (reactFlowInstance.current) {
         reactFlowInstance.current.fitView({
@@ -579,7 +579,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
   );
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    // Don't open editor if it's the End node
+    
     if (node.id === '__END__') return;
     
     const stateIndex = node.data.stateIndex as number;
@@ -593,21 +593,21 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
   const handleStateUpdate = useCallback((stateIndex: number, updates: Partial<QuestState>, nameChanged: boolean, oldName: string) => {
     const newStates = [...quest.states];
     
-    // Update the state itself
+    
     newStates[stateIndex] = {
       ...newStates[stateIndex],
       ...updates
     };
     
-    // If name changed, update all references to the old name
+    
     if (nameChanged && updates.name) {
       const newName = updates.name;
       
-      // Update all rules that reference this state
+      
       newStates.forEach((state, idx) => {
         const updatedRules = state.rules.map(rule => {
           if (rule.gotoState === oldName) {
-            // Regenerate rawText with new state name
+            
             const paramsStr = rule.params.map(p => 
               typeof p === 'string' ? `"${p}"` : p
             ).join(', ');
@@ -617,14 +617,14 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
           return rule;
         });
         
-        // Update SetState and Goto actions that reference this state
+        
         const updatedActions = state.actions.map(action => {
           if ((action.type === 'SetState' || action.type === 'Goto') && 
               action.params.length > 0 && 
               action.params[0] === oldName) {
             const newParams = [...action.params];
             newParams[0] = newName;
-            // Regenerate rawText with new state name
+            
             const paramsStr = newParams.map(p => 
               typeof p === 'string' ? `"${p}"` : p
             ).join(', ');
@@ -646,7 +646,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
   }, [quest.states, onQuestChange]);
 
   const handleAddState = useCallback(() => {
-    // Generate a new state name
+    
     const existingStateNames = quest.states.map(s => s.name);
     let newStateName = 'NewState';
     let counter = 1;
@@ -655,7 +655,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
       counter++;
     }
 
-    // Create a new empty state
+    
     const newState: QuestState = {
       name: newStateName,
       description: '',
@@ -663,14 +663,14 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
       rules: []
     };
 
-    // Add the new state to the quest
+    
     onQuestChange({
       states: [...quest.states, newState]
     });
   }, [quest.states, onQuestChange]);
 
   const handleCreateState = useCallback((stateName: string) => {
-    // Create a new empty state with the specified name
+    
     const newState: QuestState = {
       name: stateName,
       description: '',
@@ -678,7 +678,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
       rules: []
     };
 
-    // Add the new state to the quest
+    
     onQuestChange({
       states: [...quest.states, newState]
     });
@@ -687,7 +687,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
   const handleExportPNG = useCallback(() => {
     if (nodes.length === 0) return;
 
-    // Calculate bounds of all nodes with extra space for edges
+    
     const nodesBounds = nodes.reduce(
       (bounds, node) => ({
         x: Math.min(bounds.x, node.position.x),
@@ -704,10 +704,10 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
     const exportWidth = contentWidth + padding * 2;
     const exportHeight = contentHeight + padding * 2;
 
-    // Store current viewport state
+    
     const currentViewport = reactFlowInstance.current?.getViewport();
 
-    // Set viewport to show all content at scale 1, positioned for export
+    
     if (reactFlowInstance.current) {
       reactFlowInstance.current.setViewport({
         x: -nodesBounds.x + padding,
@@ -716,18 +716,18 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
       });
     }
 
-    // Small delay to let the viewport update and render edges
+    
     setTimeout(() => {
-      // Get the React Flow wrapper element (contains viewport with nodes AND edges)
+      
       const reactFlowWrapper = document.querySelector('.react-flow') as HTMLElement;
       if (!reactFlowWrapper) return;
 
-      // Get computed background color (resolve CSS variable)
+      
       const rootStyle = getComputedStyle(document.documentElement);
       const bgColor = rootStyle.getPropertyValue('--bg-secondary').trim() || '#252526';
 
-      // Inline SVG styles to fix CSS variable issues with html-to-image
-      // Store original styles so we can restore them
+      
+      
       const svgElements = reactFlowWrapper.querySelectorAll('svg path, svg line, svg polyline, svg marker path');
       const originalStyles: { element: Element; stroke: string; fill: string; markerEnd: string }[] = [];
       
@@ -737,7 +737,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
         const stroke = computedStyle.stroke;
         const fill = computedStyle.fill;
         
-        // Store original inline styles
+        
         originalStyles.push({
           element: el,
           stroke: element.style.stroke,
@@ -745,7 +745,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
           markerEnd: element.style.markerEnd || ''
         });
         
-        // Apply computed styles inline (this resolves CSS variables)
+        
         if (stroke && stroke !== 'none') {
           element.style.stroke = stroke;
         }
@@ -754,7 +754,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
         }
       });
 
-      // Also fix marker colors (arrowheads)
+      
       const markers = reactFlowWrapper.querySelectorAll('marker');
       const markerOriginalStyles: { element: Element; fill: string; stroke: string }[] = [];
       markers.forEach((marker) => {
@@ -767,7 +767,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
             fill: pathEl.style.fill,
             stroke: pathEl.style.stroke
           });
-          // Markers typically use fill for the arrow color
+          
           if (computedStyle.fill && computedStyle.fill !== 'none') {
             pathEl.style.fill = computedStyle.fill;
           }
@@ -777,7 +777,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
         }
       });
 
-      // Fix edge label backgrounds and text colors
+      
       const edgeLabels = reactFlowWrapper.querySelectorAll('.react-flow__edge-textwrapper, .react-flow__edge-text, .react-flow__edgelabel-renderer');
       const labelOriginalStyles: { element: HTMLElement; bg: string; color: string; fill: string }[] = [];
       edgeLabels.forEach((label) => {
@@ -789,7 +789,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
           color: el.style.color,
           fill: el.style.fill
         });
-        // Inline the computed background and text colors
+        
         if (computedStyle.backgroundColor) {
           el.style.backgroundColor = computedStyle.backgroundColor;
         }
@@ -801,7 +801,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
         }
       });
 
-      // Fix SVG text elements (edge labels rendered as SVG)
+      
       const svgTexts = reactFlowWrapper.querySelectorAll('svg text, svg tspan');
       const textOriginalStyles: { element: SVGElement; fill: string }[] = [];
       svgTexts.forEach((text) => {
@@ -816,7 +816,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
         }
       });
 
-      // Fix SVG rect elements (label backgrounds)
+      
       const svgRects = reactFlowWrapper.querySelectorAll('svg rect');
       const rectOriginalStyles: { element: SVGElement; fill: string; fillOpacity: string }[] = [];
       svgRects.forEach((rect) => {
@@ -835,10 +835,10 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
         }
       });
 
-      // Temporarily hide scrollbars and overflow on all elements
+      
       reactFlowWrapper.classList.add('export-mode');
       
-      // Add temporary style to hide scrollbars and fix overflow during export
+      
       const style = document.createElement('style');
       style.id = 'export-style';
       style.textContent = `
@@ -870,7 +870,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
           height: `${exportHeight}px`,
         },
         filter: (node) => {
-          // Filter out panels, controls, minimap, and background dots
+          
           if (node.classList) {
             if (node.classList.contains('react-flow__panel') ||
                 node.classList.contains('react-flow__controls') ||
@@ -881,14 +881,14 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
           }
           return true;
         },
-        pixelRatio: 2, // Higher quality export
+        pixelRatio: 2, 
       }).then((dataUrl) => {
         const link = document.createElement('a');
         link.download = `${quest.questName || 'quest'}-diagram.png`;
         link.href = dataUrl;
         link.click();
 
-        // Cleanup - restore original styles
+        
         originalStyles.forEach(({ element, stroke, fill, markerEnd }) => {
           const el = element as SVGElement;
           el.style.stroke = stroke;
@@ -917,14 +917,14 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
         reactFlowWrapper.classList.remove('export-mode');
         document.getElementById('export-style')?.remove();
 
-        // Restore original viewport
+        
         if (currentViewport && reactFlowInstance.current) {
           reactFlowInstance.current.setViewport(currentViewport);
         }
       }).catch((error) => {
         console.error('Failed to export PNG:', error);
         
-        // Cleanup on error - restore original styles
+        
         originalStyles.forEach(({ element, stroke, fill, markerEnd }) => {
           const el = element as SVGElement;
           el.style.stroke = stroke;
@@ -953,7 +953,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
         reactFlowWrapper.classList.remove('export-mode');
         document.getElementById('export-style')?.remove();
         
-        // Restore original viewport on error
+        
         if (currentViewport && reactFlowInstance.current) {
           reactFlowInstance.current.setViewport(currentViewport);
         }

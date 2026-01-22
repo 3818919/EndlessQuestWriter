@@ -26,10 +26,8 @@ interface NewQuestData {
 }
 
 interface EditorPageProps {
-  // Data
   questData: Record<number, QuestData>;
   
-  // Project settings
   projectName: string;
   currentProject: string;
   serverPath: string;
@@ -37,10 +35,8 @@ interface EditorPageProps {
   theme: 'dark' | 'light';
   toggleTheme: () => void;
   
-  // Project operations
   returnToProjects: () => void;
   
-  // Quest operations
   createQuest: (questData: NewQuestData) => Promise<number>;
   deleteQuest: (id: number) => Promise<void>;
   duplicateQuest: (id: number) => Promise<number>;
@@ -65,13 +61,11 @@ const EditorPage: React.FC<EditorPageProps> = ({
   importQuest,
   exportQuest
 }) => {
-  // UI state
   const [activeTab, setActiveTab] = useState<'quests' | 'actions' | 'rules' | 'questTemplates' | 'stateTemplates' | 'credits'>('quests');
   const [leftPanelMinimized, setLeftPanelMinimized] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [selectedQuestId, setSelectedQuestId] = useState<number | null>(null);
 
-  // Derived values
   const selectedQuest = selectedQuestId !== null ? questData[selectedQuestId] : null;
 
   const handleSaveProjectSettings = async (settings: { projectName: string; serverPath: string | null }) => {
@@ -134,23 +128,19 @@ const EditorPage: React.FC<EditorPageProps> = ({
 
   const handleSaveAsTemplate = async (questId: number, questData: QuestData) => {
     try {
-      // Get template name from quest data (it should have been set by the prompt)
+  
       const templateName = questData.questName;
       if (!templateName.trim()) {
         alert('Template name is required');
         return;
       }
-      
-      // Generate EQF content from quest data
       const eqfContent = generateEQFContent(questData);
-      
-      // Get config directory
       const configDir = await window.electronAPI.getConfigDir();
       const templatesDir = `${configDir}/templates`;
       const templateFileName = `${templateName}.eqf`;
       const templatePath = `${templatesDir}/${templateFileName}`;
       
-      // Write template file
+  
       await window.electronAPI.writeTextFile(templatePath, eqfContent);
       
       alert(`Template "${templateName}" saved successfully!`);
@@ -162,7 +152,6 @@ const EditorPage: React.FC<EditorPageProps> = ({
   
   const generateEQFContent = (questData: QuestData): string => {
     let content = `quest "${questData.questName}"\nversion ${questData.version}\n`;
-    
     if (questData.hidden) content += 'hidden\n';
     if (questData.hiddenEnd) content += 'hiddenend\n';
     if (questData.disabled) content += 'disabled\n';
@@ -178,21 +167,17 @@ const EditorPage: React.FC<EditorPageProps> = ({
     
     content += '\n';
     
-    // Add states
     questData.states.forEach(state => {
       content += `State ${state.name}\n{\n`;
       content += `    desc "${state.description}"\n`;
-      
-      // Add actions
       state.actions.forEach(action => {
         content += `    action ${action.rawText}\n`;
       });
-      
-      // Add rules
+
       state.rules.forEach(rule => {
         content += `    rule ${rule.rawText}\n`;
       });
-      
+
       content += '}\n\n';
     });
     

@@ -50,8 +50,6 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
-  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<string | null>(null);
   const [ruleName, setRuleName] = useState('');
@@ -59,7 +57,7 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
   const [params, setParams] = useState<ParamEditor[]>([]);
   const [nextParamId, setNextParamId] = useState(1);
   
-  // Load rules on mount
+  
   useEffect(() => {
     loadRules();
   }, []);
@@ -95,12 +93,12 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
   
   const handleOpenDialog = (ruleName?: string) => {
     if (ruleName && rules[ruleName]) {
-      // Editing existing rule
+      
       setEditingRule(ruleName);
       setRuleName(ruleName);
       setDescription(rules[ruleName].description);
       
-      // Convert params to editor format
+      
       const editorParams: ParamEditor[] = rules[ruleName].params.map((param, index) => ({
         name: param.name,
         type: param.type,
@@ -109,7 +107,7 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
       setParams(editorParams);
       setNextParamId(editorParams.length + 1);
     } else {
-      // Adding new rule
+      
       setEditingRule(null);
       setRuleName('');
       setDescription('');
@@ -149,31 +147,31 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
     }
     
     try {
-      // Get config directory
+      
       const configDir = await window.electronAPI.getConfigDir();
       const rulesPath = `${configDir}/rules.ini`;
       
-      // Read existing rules.ini
+      
       const result = await window.electronAPI.readTextFile(rulesPath);
       let content = result.success && result.data ? result.data : '';
       
-      // Generate new rule entry with spacing
+      
       const signature = generateSignature(ruleName, params);
       const newEntry = `\n\n[${ruleName}]\nsignature = \`${signature}\`\ndescription = ${description}`;
       
       if (editingRule && rules[editingRule]) {
-        // Remove old entry if it exists
+        
         const oldEntry = `[${editingRule}]\nsignature = \`${rules[editingRule].rawSignature}\`\ndescription = ${rules[editingRule].description}`;
         content = content.replace(oldEntry, '');
       }
       
-      // Add new entry (always at the end)
+      
       content += newEntry;
       
-      // Write back to file
+      
       await window.electronAPI.writeTextFile(rulesPath, content);
       
-      // Clear cache and reload
+      
       clearConfigCache();
       await loadRules();
       
@@ -203,13 +201,13 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
       const rule = rules[ruleName];
       const entry = `[${ruleName}]\nsignature = \`${rule.rawSignature}\`\ndescription = ${rule.description}`;
       
-      // Remove the rule entry
+      
       content = content.replace(entry, '');
       
-      // Write back to file
+      
       await window.electronAPI.writeTextFile(rulesPath, content);
       
-      // Clear cache and reload
+      
       clearConfigCache();
       await loadRules();
       

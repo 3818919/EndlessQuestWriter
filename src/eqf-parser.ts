@@ -1,5 +1,5 @@
-// EQF Parser for Endless Online Quest Files
-// Based on EOPlus documentation from https://apollo-games.com/EOPlus/
+
+
 
 export interface QuestAction {
   type: string;
@@ -91,9 +91,8 @@ export interface RuleMetadata {
   }[];
 }
 
-// Action Metadata (80+ actions from EOPlus)
+
 export const ACTION_METADATA: Record<string, ActionMetadata> = {
-  // Dialog Actions
   AddNpcText: {
     name: 'AddNpcText',
     description: 'Add a simple message to the dialog window',
@@ -132,7 +131,7 @@ export const ACTION_METADATA: Record<string, ActionMetadata> = {
     ]
   },
   
-  // Item Actions
+  
   GiveItem: {
     name: 'GiveItem',
     description: 'Reward a player with an item',
@@ -228,7 +227,7 @@ export const ACTION_METADATA: Record<string, ActionMetadata> = {
     ]
   },
 
-  // Reward Actions
+  
   GiveExp: {
     name: 'GiveExp',
     description: 'Reward player with experience points',
@@ -281,7 +280,7 @@ export const ACTION_METADATA: Record<string, ActionMetadata> = {
     ]
   },
 
-  // Effects Actions
+  
   PlayEffect: {
     name: 'PlayEffect',
     description: 'Play a special effect on a player',
@@ -323,8 +322,6 @@ export const ACTION_METADATA: Record<string, ActionMetadata> = {
       { name: 'Magnitude', type: 'number' }
     ]
   },
-
-  // State Control Actions
   Reset: {
     name: 'Reset',
     description: 'Reset the current quest',
@@ -376,8 +373,6 @@ export const ACTION_METADATA: Record<string, ActionMetadata> = {
       { name: 'High Number', type: 'number', optional: true }
     ]
   },
-
-  // Player Modification Actions
   SetClass: {
     name: 'SetClass',
     description: 'Change player class',
@@ -446,8 +441,6 @@ export const ACTION_METADATA: Record<string, ActionMetadata> = {
       { name: 'Name', type: 'name' }
     ]
   },
-
-  // Display Actions
   ShowHint: {
     name: 'ShowHint',
     description: 'Show hint in information bar',
@@ -456,8 +449,6 @@ export const ACTION_METADATA: Record<string, ActionMetadata> = {
       { name: 'Message', type: 'string' }
     ]
   },
-
-  // Map Actions
   LoadMap: {
     name: 'LoadMap',
     description: 'Load a map or alternate version',
@@ -469,9 +460,8 @@ export const ACTION_METADATA: Record<string, ActionMetadata> = {
   }
 };
 
-// Rule Metadata (60+ rules from EOPlus)
+
 export const RULE_METADATA: Record<string, RuleMetadata> = {
-  // Interaction Rules
   TalkedToNpc: {
     name: 'TalkedToNpc',
     description: 'Dialog window with NPC was opened',
@@ -494,8 +484,6 @@ export const RULE_METADATA: Record<string, RuleMetadata> = {
     category: 'Interaction',
     params: []
   },
-
-  // Item Rules
   GotItems: {
     name: 'GotItems',
     description: 'Player has required amount of items',
@@ -523,30 +511,6 @@ export const RULE_METADATA: Record<string, RuleMetadata> = {
       { name: 'Amount', type: 'number' }
     ]
   },
-  PickupFakeItem: {
-    name: 'PickupFakeItem',
-    description: 'Pick up item visible only to player',
-    category: 'Items',
-    params: [
-      { name: 'Map ID', type: 'mapId' },
-      { name: 'X', type: 'coordinate' },
-      { name: 'Y', type: 'coordinate' },
-      { name: 'Item ID', type: 'itemId' },
-      { name: 'Amount', type: 'number' }
-    ]
-  },
-  PickupRandomItem: {
-    name: 'PickupRandomItem',
-    description: 'Pick up item at random coordinates',
-    category: 'Items',
-    params: [
-      { name: 'Random Name', type: 'randomName' },
-      { name: 'Item ID', type: 'itemId' },
-      { name: 'Amount', type: 'number' }
-    ]
-  },
-
-  // Combat Rules
   KilledNpcs: {
     name: 'KilledNpcs',
     description: 'Killed required amount of NPCs',
@@ -564,33 +528,6 @@ export const RULE_METADATA: Record<string, RuleMetadata> = {
       { name: 'Amount', type: 'number' }
     ]
   },
-  Die: {
-    name: 'Die',
-    description: 'Player died',
-    category: 'Combat',
-    params: [
-      { name: 'Count', type: 'number', optional: true }
-    ]
-  },
-  HasKilled: {
-    name: 'HasKilled',
-    description: 'Lifetime total kills of NPC',
-    category: 'Combat',
-    params: [
-      { name: 'NPC ID', type: 'npcId' },
-      { name: 'Amount', type: 'number' }
-    ]
-  },
-  ArenaWins: {
-    name: 'ArenaWins',
-    description: 'Won arena rounds',
-    category: 'Combat',
-    params: [
-      { name: 'Amount', type: 'number' }
-    ]
-  },
-
-  // Location Rules
   EnterCoord: {
     name: 'EnterCoord',
     description: 'Player stood at coordinate',
@@ -627,28 +564,6 @@ export const RULE_METADATA: Record<string, RuleMetadata> = {
       { name: 'Map ID', type: 'mapId' }
     ]
   },
-  EnterArea: {
-    name: 'EnterArea',
-    description: 'Player entered area radius',
-    category: 'Location',
-    params: [
-      { name: 'Map ID', type: 'mapId' },
-      { name: 'X', type: 'coordinate' },
-      { name: 'Y', type: 'coordinate' },
-      { name: 'Radius', type: 'number' }
-    ]
-  },
-  LeaveArea: {
-    name: 'LeaveArea',
-    description: 'Player left area radius',
-    category: 'Location',
-    params: [
-      { name: 'Map ID', type: 'mapId' },
-      { name: 'X', type: 'coordinate' },
-      { name: 'Y', type: 'coordinate' },
-      { name: 'Radius', type: 'number' }
-    ]
-  },
   CitizenOf: {
     name: 'CitizenOf',
     description: 'Player is citizen of home town',
@@ -657,8 +572,6 @@ export const RULE_METADATA: Record<string, RuleMetadata> = {
       { name: 'Home Name', type: 'home' }
     ]
   },
-
-  // Skills Rules
   GotSpell: {
     name: 'GotSpell',
     description: 'Player learned spell',
@@ -684,8 +597,6 @@ export const RULE_METADATA: Record<string, RuleMetadata> = {
       { name: 'Amount', type: 'number' }
     ]
   },
-
-  // Stats Rules
   StatIs: {
     name: 'StatIs',
     description: 'Stat equals value',
@@ -732,8 +643,6 @@ export const RULE_METADATA: Record<string, RuleMetadata> = {
       { name: 'High Value', type: 'number' }
     ]
   },
-
-  // Character Rules
   IsClass: {
     name: 'IsClass',
     description: 'Player has class ID',
@@ -766,38 +675,12 @@ export const RULE_METADATA: Record<string, RuleMetadata> = {
       { name: 'Name', type: 'name' }
     ]
   },
-
-  // Equipment Rules
   IsWearing: {
     name: 'IsWearing',
     description: 'Player has item equipped',
     category: 'Equipment',
     params: [
       { name: 'Item ID', type: 'itemId' }
-    ]
-  },
-  NotWearing: {
-    name: 'NotWearing',
-    description: 'Player does not have item equipped',
-    category: 'Equipment',
-    params: [
-      { name: 'Item ID', type: 'itemId' }
-    ]
-  },
-  Unequipped: {
-    name: 'Unequipped',
-    description: 'Player has nothing equipped',
-    category: 'Equipment',
-    params: []
-  },
-
-  // Quest Progress Rules
-  FinishedQuest: {
-    name: 'FinishedQuest',
-    description: 'Quest has been completed',
-    category: 'Quest Progress',
-    params: [
-      { name: 'Quest ID', type: 'questId' }
     ]
   },
   CheckDaily: {
@@ -813,58 +696,10 @@ export const RULE_METADATA: Record<string, RuleMetadata> = {
     params: [
       { name: 'Amount', type: 'number' }
     ]
-  },
-  TimeElapsed: {
-    name: 'TimeElapsed',
-    description: 'Time has passed since state entered',
-    category: 'Quest Progress',
-    params: [
-      { name: 'Time', type: 'time' }
-    ]
-  },
-  WaitMinutes: {
-    name: 'WaitMinutes',
-    description: 'Minutes have passed',
-    category: 'Quest Progress',
-    params: [
-      { name: 'Minutes', type: 'number' }
-    ]
-  },
-  WaitSeconds: {
-    name: 'WaitSeconds',
-    description: 'Seconds have passed',
-    category: 'Quest Progress',
-    params: [
-      { name: 'Seconds', type: 'number' }
-    ]
-  },
-  Stepped: {
-    name: 'Stepped',
-    description: 'Steps walked since state entered',
-    category: 'Quest Progress',
-    params: [
-      { name: 'Amount', type: 'number' }
-    ]
-  },
-  HasStepped: {
-    name: 'HasStepped',
-    description: 'Lifetime total steps',
-    category: 'Quest Progress',
-    params: [
-      { name: 'Amount', type: 'number' }
-    ]
-  },
-
-  // Misc Rules
-  Disconnected: {
-    name: 'Disconnected',
-    description: 'Player disconnected (checked at login)',
-    category: 'Misc',
-    params: []
   }
 };
 
-// Stat keywords for validation
+
 export const STAT_KEYWORDS = [
   'accuracy', 'agi', 'armor', 'cha', 'con', 'base_agi', 'base_cha', 'base_con',
   'base_int', 'base_str', 'base_wis', 'evade', 'exp', 'goldbank', 'hp', 'int',
@@ -892,10 +727,10 @@ export class EQFParser {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       
-      // Skip empty lines and comments
+      
       if (!line || line.startsWith('//')) continue;
 
-      // Check for section headers
+      
       if (line.toLowerCase().startsWith('main')) {
         currentSection = 'main';
         continue;
@@ -923,7 +758,7 @@ export class EQFParser {
         continue;
       }
 
-      // Track braces
+      
       if (line.includes('{')) braceDepth++;
       if (line.includes('}')) {
         braceDepth--;
@@ -941,7 +776,7 @@ export class EQFParser {
         continue;
       }
 
-      // Parse main section
+      
       if (currentSection === 'main') {
         if (line.toLowerCase().startsWith('questname')) {
           quest.questName = this.extractQuotedString(line);
@@ -973,7 +808,6 @@ export class EQFParser {
         }
       }
 
-      // Parse state section
       if (currentSection === 'state' && currentState) {
         if (line.toLowerCase().startsWith('desc')) {
           currentState.description = this.extractQuotedString(line);
@@ -986,7 +820,6 @@ export class EQFParser {
         }
       }
 
-      // Parse random section
       if (currentSection === 'random' && currentRandomBlock) {
         if (line.toLowerCase().startsWith('coord')) {
           const params = this.extractParams(line, 'coord');
@@ -1005,7 +838,6 @@ export class EQFParser {
     let output = 'Main\n{\n';
     output += `\tquestname\t"${quest.questName}"\n`;
     output += `\tversion\t\t${quest.version}\n`;
-    
     if (quest.hidden) output += '\thidden\n';
     if (quest.hiddenEnd) output += '\thidden_end\n';
     if (quest.disabled) output += '\tdisabled\n';
@@ -1022,7 +854,7 @@ export class EQFParser {
     
     output += '}\n\n';
 
-    // Serialize random blocks (random keyword is lowercase)
+    
     quest.randomBlocks.forEach(block => {
       output += `random ${block.name}\n{\n`;
       block.entries.forEach(entry => {
@@ -1034,22 +866,18 @@ export class EQFParser {
       output += '}\n\n';
     });
 
-    // Serialize states
+    
     quest.states.forEach(state => {
       output += `state ${state.name}\n{\n`;
-      
       if (state.description) {
         output += `\tdesc\t"${state.description}"\n`;
       }
-
       state.actions.forEach(action => {
         output += `\taction\t${action.rawText}\n`;
       });
-
       state.rules.forEach(rule => {
         output += `\trule\t${rule.rawText}\n`;
       });
-
       output += '}\n\n';
     });
 
@@ -1084,7 +912,6 @@ export class EQFParser {
   private static parseRule(line: string): QuestRule | null {
     const ruleMatch = line.match(/rule\s+(\w+)\s*\((.*?)\)\s+goto\s+(\w+)/i);
     if (!ruleMatch) return null;
-
     const type = ruleMatch[1];
     const paramsStr = ruleMatch[2];
     const gotoState = ruleMatch[3];
@@ -1100,7 +927,6 @@ export class EQFParser {
 
   private static parseParams(paramsStr: string): (string | number)[] {
     if (!paramsStr.trim()) return [];
-
     const params: (string | number)[] = [];
     let current = '';
     let inQuotes = false;
@@ -1134,17 +960,13 @@ export class EQFParser {
   }
 
   private static parseParam(param: string): string | number {
-    // Remove quotes if present
     if (param.startsWith('"') && param.endsWith('"')) {
       return param.slice(1, -1);
     }
-
-    // Try to parse as number
     const num = parseFloat(param);
     if (!isNaN(num)) {
       return num;
     }
-
     return param;
   }
 

@@ -35,14 +35,12 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     }
   };
 
-  const handleSave = () => {
-    // Validate project name
+  const handleSave = () => {    
     if (!name || name.trim().length === 0) {
       setNameError('Project name cannot be empty');
       return;
     }
-
-    // Check for invalid characters in project name
+    
     if (!/^[a-zA-Z0-9_\- ]+$/.test(name)) {
       setNameError('Project name can only contain letters, numbers, spaces, hyphens, and underscores');
       return;

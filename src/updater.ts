@@ -31,18 +31,16 @@ export class AppUpdater extends EventEmitter {
   }
 
   private setupAutoUpdater() {
-    // Configure auto-updater
-    autoUpdater.autoDownload = false; // We'll control when to download
+    autoUpdater.autoDownload = false; 
     autoUpdater.autoInstallOnAppQuit = true;
 
-    // Set GitHub repository for updates
     autoUpdater.setFeedURL({
       provider: 'github',
       owner: '3818919',
       repo: 'EndlessQuestWriter'
     });
 
-    // Event handlers
+    
     autoUpdater.on('checking-for-update', () => {
       console.log('Checking for update...');
       this.emit('checking-for-update');
@@ -160,7 +158,7 @@ export class AppUpdater extends EventEmitter {
     return result.response === 0;
   }
 
-  // Method to check for updates on startup
+  
   async checkForUpdatesOnStartup(): Promise<{
     hasUpdate: boolean;
     updateInfo?: UpdateInfo;
@@ -173,7 +171,7 @@ export class AppUpdater extends EventEmitter {
           resolved = true;
           resolve({ hasUpdate: false });
         }
-      }, 10000); // 10 second timeout
+      }, 10000); 
 
       this.once('update-available', (updateInfo: UpdateInfo) => {
         if (!resolved) {
@@ -203,7 +201,7 @@ export class AppUpdater extends EventEmitter {
     });
   }
 
-  // Method to download and install update with progress
+  
   async downloadAndInstallUpdate(updateInfo: UpdateInfo): Promise<void> {
     return new Promise((resolve, reject) => {
       this.once('update-downloaded', () => {
@@ -219,5 +217,5 @@ export class AppUpdater extends EventEmitter {
   }
 }
 
-// Singleton instance
+
 export const appUpdater = new AppUpdater();

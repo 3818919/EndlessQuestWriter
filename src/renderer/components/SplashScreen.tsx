@@ -13,9 +13,7 @@ export default function SplashScreen({ isVisible, status, progress, onComplete }
 
   useEffect(() => {
     if (progress >= 100 && onComplete) {
-      // Start fade out animation
       setFadeOut(true);
-      // Call onComplete after fade animation
       setTimeout(() => {
         onComplete();
       }, 500);

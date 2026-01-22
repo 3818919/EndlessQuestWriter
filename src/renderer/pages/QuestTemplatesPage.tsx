@@ -18,17 +18,13 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
-  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
   const [templateName, setTemplateName] = useState('');
-  
-  // Quest editor state
   const [questEditorOpen, setQuestEditorOpen] = useState(false);
   const [currentQuest, setCurrentQuest] = useState<QuestData | null>(null);
   
-  // Load templates on mount
+  
   useEffect(() => {
     loadTemplatesData();
   }, []);
@@ -49,20 +45,20 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
   
   const handleOpenDialog = (templateFileName?: string) => {
     if (templateFileName && templates[templateFileName]) {
-      // Editing existing template - open quest editor directly
+      
       const template = templates[templateFileName];
       setEditingTemplate(templateFileName);
       setTemplateName(templateFileName.replace('.eqf', ''));
       
-      // Convert TemplateData to QuestData (add an ID)
+      
       const questData: QuestData = {
-        id: 0, // Template ID - not used for templates
+        id: 0, 
         ...template
       };
       setCurrentQuest(questData);
       setQuestEditorOpen(true);
     } else {
-      // Adding new template - show dialog first to get name
+      
       setEditingTemplate(null);
       setTemplateName('');
       setDialogOpen(true);
@@ -87,20 +83,15 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
     }
     
     try {
-      // Generate EQF content from quest data
+      
       const questData = { ...currentQuest, ...updates } as QuestData;
       const eqfContent = generateEQFContent(questData);
-      
-      // Get config directory
       const configDir = await window.electronAPI.getConfigDir();
       const templatesDir = `${configDir}/templates`;
       const templateFileName = `${templateName}.eqf`;
       const templatePath = `${templatesDir}/${templateFileName}`;
       
-      // Write template file
       await window.electronAPI.writeTextFile(templatePath, eqfContent);
-      
-      // Clear cache and reload
       await loadTemplatesData();
       
       setSuccessMessage(editingTemplate ? 'Template updated successfully!' : 'Template added successfully!');
@@ -129,17 +120,15 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
     
     content += '\n';
     
-    // Add states
+    
     questData.states.forEach(state => {
       content += `State ${state.name}\n{\n`;
       content += `    desc "${state.description}"\n`;
       
-      // Add actions
       state.actions.forEach(action => {
         content += `    action ${action.rawText}\n`;
       });
       
-      // Add rules
       state.rules.forEach(rule => {
         content += `    rule ${rule.rawText}\n`;
       });
@@ -151,7 +140,7 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
   };
   
   const handleCreateNewTemplate = () => {
-    // Create a new empty quest for the template
+    
     const newQuest: QuestData = {
       id: 0,
       questName: 'New Template',
@@ -188,10 +177,7 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
       const templatePath = `${templatesDir}/${templateFileName}`;
       
       await window.electronAPI.deleteFile(templatePath);
-      
-      // Clear cache and reload
       await loadTemplatesData();
-      
       setSuccessMessage('Template deleted successfully!');
     } catch (err) {
       setError('Failed to delete template. Please try again.');
@@ -200,11 +186,11 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
   };
   
   const handleExportTemplate = async (questId: number) => {
-    // Not used for templates
+    
   };
   
   const handleDeleteQuest = async (questId: number) => {
-    // Not used for templates
+    
   };
   
   if (loading) {

@@ -51,7 +51,7 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
-  // Dialog state
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAction, setEditingAction] = useState<string | null>(null);
   const [actionName, setActionName] = useState('');
@@ -59,7 +59,7 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
   const [params, setParams] = useState<ParamEditor[]>([]);
   const [nextParamId, setNextParamId] = useState(1);
   
-  // Load actions on mount
+  
   useEffect(() => {
     loadActions();
   }, []);
@@ -95,12 +95,12 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
   
   const handleOpenDialog = (actionName?: string) => {
     if (actionName && actions[actionName]) {
-      // Editing existing action
+      
       setEditingAction(actionName);
       setActionName(actionName);
       setDescription(actions[actionName].description);
       
-      // Convert params to editor format
+      
       const editorParams: ParamEditor[] = actions[actionName].params.map((param, index) => ({
         name: param.name,
         type: param.type,
@@ -109,7 +109,7 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
       setParams(editorParams);
       setNextParamId(editorParams.length + 1);
     } else {
-      // Adding new action
+      
       setEditingAction(null);
       setActionName('');
       setDescription('');
@@ -149,34 +149,21 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
     }
     
     try {
-      // Get config directory
+      
       const configDir = await window.electronAPI.getConfigDir();
       const actionsPath = `${configDir}/actions.ini`;
-      
-      // Read existing actions.ini
       const result = await window.electronAPI.readTextFile(actionsPath);
       let content = result.success && result.data ? result.data : '';
-      
-      // Generate new action entry with spacing
       const signature = generateSignature(actionName, params);
       const newEntry = `\n\n[${actionName}]\nsignature = \`${signature};\`\ndescription = ${description}`;
-      
       if (editingAction && actions[editingAction]) {
-        // Remove old entry if it exists
         const oldEntry = `[${editingAction}]\nsignature = \`${actions[editingAction].rawSignature}\`\ndescription = ${actions[editingAction].description}`;
         content = content.replace(oldEntry, '');
       }
-      
-      // Add new entry (always at the end)
       content += newEntry;
-      
-      // Write back to file
       await window.electronAPI.writeTextFile(actionsPath, content);
-      
-      // Clear cache and reload
       clearConfigCache();
       await loadActions();
-      
       setSuccessMessage(editingAction ? 'Action updated successfully!' : 'Action added successfully!');
       handleCloseDialog();
     } catch (err) {
@@ -198,21 +185,14 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
       if (!result.success || !result.data) {
         throw new Error('Failed to read actions file');
       }
-      
       let content = result.data;
       const action = actions[actionName];
       const entry = `[${actionName}]\nsignature = \`${action.rawSignature}\`\ndescription = ${action.description}`;
-      
-      // Remove the action entry
       content = content.replace(entry, '');
       
-      // Write back to file
       await window.electronAPI.writeTextFile(actionsPath, content);
-      
-      // Clear cache and reload
       clearConfigCache();
       await loadActions();
-      
       setSuccessMessage('Action deleted successfully!');
     } catch (err) {
       setError('Failed to delete action. Please try again.');

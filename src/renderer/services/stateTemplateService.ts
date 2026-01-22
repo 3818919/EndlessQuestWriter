@@ -12,7 +12,6 @@ export interface StateTemplateData {
   rules: QuestRule[];
 }
 
-// Cache for loaded state templates
 let stateTemplatesCache: Record<string, StateTemplateData> | null = null;
 let stateTemplatesLoadPromise: Promise<Record<string, StateTemplateData>> | null = null;
 
@@ -33,11 +32,9 @@ function parseStateTemplate(content: string): StateTemplateData {
 
   for (const line of lines) {
     const trimmed = line.trim();
-    
-    // Skip empty lines and comments
+        
     if (!trimmed || trimmed.startsWith('//')) continue;
-
-    // Parse description
+    
     if (trimmed.toLowerCase().startsWith('desc')) {
       const match = trimmed.match(/"([^"]*)"/);
       if (match) {
@@ -45,8 +42,7 @@ function parseStateTemplate(content: string): StateTemplateData {
       }
       continue;
     }
-
-    // Parse action
+    
     if (trimmed.toLowerCase().startsWith('action')) {
       const actionMatch = trimmed.match(/action\s+(\w+)\s*\((.*?)\)\s*;?/i);
       if (actionMatch) {
@@ -61,8 +57,7 @@ function parseStateTemplate(content: string): StateTemplateData {
       }
       continue;
     }
-
-    // Parse rule
+    
     if (trimmed.toLowerCase().startsWith('rule')) {
       const ruleMatch = trimmed.match(/rule\s+(\w+)\s*\((.*?)\)\s+goto\s+(\w+)/i);
       if (ruleMatch) {
@@ -118,13 +113,11 @@ function parseParams(paramsStr: string): (string | number)[] {
 /**
  * Parse a single parameter value
  */
-function parseParam(param: string): string | number {
-  // Remove quotes if present
+function parseParam(param: string): string | number {  
   if (param.startsWith('"') && param.endsWith('"')) {
     return param.slice(1, -1);
   }
-
-  // Try to parse as number
+  
   const num = parseFloat(param);
   if (!isNaN(num)) {
     return num;
@@ -136,13 +129,11 @@ function parseParam(param: string): string | number {
 /**
  * Load all state templates from the config/templates/states directory
  */
-export async function loadStateTemplates(): Promise<Record<string, StateTemplateData>> {
-  // Return cached templates if available
+export async function loadStateTemplates(): Promise<Record<string, StateTemplateData>> {  
   if (stateTemplatesCache) {
     return stateTemplatesCache;
   }
-  
-  // If already loading, wait for that promise
+    
   if (stateTemplatesLoadPromise) {
     return stateTemplatesLoadPromise;
   }
@@ -158,38 +149,32 @@ export async function loadStateTemplates(): Promise<Record<string, StateTemplate
     try {
       const configDir = await window.electronAPI.getConfigDir();
       const statesDir = `${configDir}/templates/states`;
-      
-      // Check if states directory exists
+            
       const dirExists = await window.electronAPI.fileExists(statesDir);
       if (!dirExists) {
         console.log('State templates directory does not exist, creating it');
         await window.electronAPI.ensureDir(statesDir);
         return templates;
       }
-      
-      // List all .eqf files in states directory
+            
       const listResult = await window.electronAPI.listFiles(statesDir, '.eqf');
       if (!listResult.success || listResult.files.length === 0) {
         console.log('No state template files found');
         return templates;
       }
-      
-      // Build file paths for batch reading
+            
       const filePaths = listResult.files.map(filename => `${statesDir}/${filename}`);
       const batchResults = await window.electronAPI.readTextBatch(filePaths);
-      
-      // Parse each state template
+            
       for (let i = 0; i < listResult.files.length; i++) {
         const filename = listResult.files[i];
         const filePath = filePaths[i];
         const result = batchResults[filePath];
         
         if (result?.success && result.data) {
-          try {
-            // Parse the state template file
+          try {            
             const stateTemplate = parseStateTemplate(result.data);
-            
-            // Use filename (without extension) as the template name
+                        
             const templateName = filename.replace(/\.eqf$/i, '');
             templates[templateName] = stateTemplate;
             

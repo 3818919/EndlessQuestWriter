@@ -11,7 +11,7 @@ export interface ActionOrRuleDoc {
   signature: string;
   description: string;
   params: ParamInfo[];
-  rawSignature: string; // The exact signature line from the config (e.g., includes semicolon)
+  rawSignature: string; 
 }
 
 export interface ConfigData {
@@ -23,15 +23,13 @@ export interface ConfigData {
  * Parse parameters from a signature string like `ActionName(param1, "param2");`
  * Parameters in double quotes are strings, others are integers
  */
-function parseParamsFromSignature(signature: string): ParamInfo[] {
-  // Extract the content between parentheses
+function parseParamsFromSignature(signature: string): ParamInfo[] {  
   const match = signature.match(/\(([^)]*)\)/);
   if (!match || !match[1].trim()) return [];
   
   const paramsStr = match[1];
   const params: ParamInfo[] = [];
-  
-  // Split by comma, handling quoted strings
+    
   let current = '';
   let inQuotes = false;
   
@@ -51,8 +49,7 @@ function parseParamsFromSignature(signature: string): ParamInfo[] {
       current += char;
     }
   }
-  
-  // Don't forget the last parameter
+    
   const lastParam = current.trim();
   if (lastParam) {
     params.push(parseParamType(lastParam));
@@ -64,18 +61,14 @@ function parseParamsFromSignature(signature: string): ParamInfo[] {
 /**
  * Determine if a parameter is a string or integer based on whether it's in quotes
  */
-function parseParamType(param: string): ParamInfo {
-  // Remove backticks if present
+function parseParamType(param: string): ParamInfo {  
   const cleanParam = param.replace(/`/g, '');
-  
-  // If it's in double quotes, it's a string parameter
-  if (cleanParam.startsWith('"') && cleanParam.endsWith('"')) {
-    // Extract the name from within the quotes
+    
+  if (cleanParam.startsWith('"') && cleanParam.endsWith('"')) {    
     const name = cleanParam.slice(1, -1);
     return { name, type: 'string' };
   }
-  
-  // Otherwise it's an integer parameter
+    
   return { name: cleanParam, type: 'integer' };
 }
 
@@ -91,16 +84,12 @@ function parseIniContent(content: string): Record<string, ActionOrRuleDoc> {
   
   for (const line of lines) {
     const trimmed = line.trim();
-    
-    // Skip empty lines and comments
+        
     if (!trimmed || trimmed.startsWith(';')) {
       continue;
     }
-    
-    // Check for section header [SectionName]
     const sectionMatch = trimmed.match(/^\[([^\]]+)\]$/);
-    if (sectionMatch) {
-      // Save previous section if exists
+    if (sectionMatch) {      
       if (currentSection && currentData.signature && currentData.description) {
         const params = parseParamsFromSignature(currentData.signature);
         result[currentSection] = {
@@ -110,14 +99,12 @@ function parseIniContent(content: string): Record<string, ActionOrRuleDoc> {
           rawSignature: currentData.signature
         };
       }
-      
-      // Start new section
+            
       currentSection = sectionMatch[1];
       currentData = {};
       continue;
     }
-    
-    // Parse key = value
+        
     const keyValueMatch = trimmed.match(/^(\w+)\s*=\s*(.+)$/);
     if (keyValueMatch && currentSection) {
       const [, key, value] = keyValueMatch;
@@ -128,8 +115,7 @@ function parseIniContent(content: string): Record<string, ActionOrRuleDoc> {
       }
     }
   }
-  
-  // Don't forget the last section
+    
   if (currentSection && currentData.signature && currentData.description) {
     const params = parseParamsFromSignature(currentData.signature);
     result[currentSection] = {
@@ -143,20 +129,17 @@ function parseIniContent(content: string): Record<string, ActionOrRuleDoc> {
   return result;
 }
 
-// Cache for loaded config
 let configCache: ConfigData | null = null;
 let configLoadPromise: Promise<ConfigData> | null = null;
 
 /**
  * Load actions and rules configuration from external INI files
  */
-export async function loadConfig(): Promise<ConfigData> {
-  // Return cached config if available
+export async function loadConfig(): Promise<ConfigData> {  
   if (configCache) {
     return configCache;
   }
-  
-  // If already loading, wait for that promise
+    
   if (configLoadPromise) {
     return configLoadPromise;
   }
@@ -174,8 +157,7 @@ export async function loadConfig(): Promise<ConfigData> {
     
     try {
       const configDir = await window.electronAPI.getConfigDir();
-      
-      // Load actions.ini
+            
       const actionsPath = `${configDir}/actions.ini`;
       const actionsResult = await window.electronAPI.readTextFile(actionsPath);
       if (actionsResult.success && actionsResult.data) {
@@ -184,8 +166,7 @@ export async function loadConfig(): Promise<ConfigData> {
       } else {
         console.warn('Could not load actions.ini:', actionsResult.error);
       }
-      
-      // Load rules.ini
+            
       const rulesPath = `${configDir}/rules.ini`;
       const rulesResult = await window.electronAPI.readTextFile(rulesPath);
       if (rulesResult.success && rulesResult.data) {

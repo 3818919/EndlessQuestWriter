@@ -4,7 +4,7 @@ import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
 import './LandingScreen.css';
 
-// Check if running in Electron
+
 const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
 
 interface ProjectConfig {
@@ -33,7 +33,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isSelecting, setIsSelecting] = useState(false);
 
-  // Initialize app data directory path
+  
   useEffect(() => {
     const initAppDataPath = async () => {
       if (isElectron && window.electronAPI) {
@@ -44,7 +44,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
     initAppDataPath();
   }, []);
 
-  // Load projects when appDataPath is available
+  
   useEffect(() => {
     if (appDataPath && isElectron && window.electronAPI) {
       loadProjects();
@@ -70,13 +70,13 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
         return;
       }
 
-      // Build config paths for batch reading
+      
       const configPaths = projectDirs.map(name => `${appDataPath}/${name}/config.json`);
       
-      // Batch read all config files at once
+      
       const batchResults = await window.electronAPI.readTextBatch(configPaths);
       
-      // Parse results
+      
       const loadedProjects: Array<{ name: string; config: ProjectConfig }> = [];
       
       for (let i = 0; i < projectDirs.length; i++) {
@@ -113,7 +113,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
       return;
     }
 
-    // Verify the server directory contains a data/quests folder or can have one created
+    
     if (window.electronAPI) {
       const questsPath = `${newProjectServerPath}/data/quests`;
       const questsExists = await window.electronAPI.fileExists(questsPath);
@@ -130,7 +130,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
     setShowLinkProject(false);
     setNewProjectName('');
     setNewProjectServerPath('');
-    // After linking, automatically select the project to load quests
+    
     await onSelectProject(newProjectName.trim());
   };
 
@@ -141,7 +141,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
     if (result.success && result.path) {
       setNewProjectServerPath(result.path);
       
-      // Auto-fill project name from folder name if empty
+      
       if (!newProjectName.trim()) {
         const folderName = result.path.split('/').pop() || result.path.split('\\').pop() || '';
         setNewProjectName(folderName);
@@ -150,7 +150,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
   };
 
   const handleDeleteProject = async (projectName: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent project selection when clicking delete
+    e.stopPropagation(); 
     
     if (!window.electronAPI || !appDataPath) return;
     
@@ -165,7 +165,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
         onDeleteProject(projectName);
       }
       
-      // Reload projects list
+      
       loadProjects();
     } catch (error: any) {
       console.error('Error deleting project:', error);

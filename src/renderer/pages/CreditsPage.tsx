@@ -10,7 +10,6 @@ interface CreditsPageProps {
 const CreditsPage: React.FC<CreditsPageProps> = ({ theme }) => {
   const openExternalLink = (url: string) => {
     if (window.electronAPI) {
-      // Use shell.openExternal via IPC if available
       window.open(url, '_blank');
     } else {
       window.open(url, '_blank');
