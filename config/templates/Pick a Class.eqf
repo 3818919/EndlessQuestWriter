@@ -1,6 +1,5 @@
-quest "Pick a Class"
+quest ""
 version 1
-hidden
 
 State Begin
 {
@@ -18,8 +17,8 @@ State BadKarma
     desc ""
     action AddNpcText(4, "Ewww, you look demonic.. Well what do you want? I don't have all day.");
     action AddNpcInput(4, 1, "Class menu");
-    action AddNpcInput(4, 2, "Karma menu");
     rule InputNpc(1) goto Class
+    action AddNpcInput(4, 2, "Karma menu");
     rule InputNpc(2) goto Karma
 }
 

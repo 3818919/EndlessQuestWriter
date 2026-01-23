@@ -16,7 +16,8 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import DescriptionIcon from '@mui/icons-material/Description';
 import FolderIcon from '@mui/icons-material/Folder';
 import LayersIcon from '@mui/icons-material/Layers';
-import { QuestData } from '../../eqf-parser';
+import { QuestData, QuestState } from '../../eqf-parser';
+import { clearStateTemplatesCache } from '../services/stateTemplateService';
 
 interface NewQuestData {
   id: number;
@@ -126,20 +127,28 @@ const EditorPage: React.FC<EditorPageProps> = ({
     }
   };
 
+  const [templateSaveStatus, setTemplateSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  // Callback when a state is saved as template (from StateNodeEditor)
+  const handleSaveStateAsTemplate = (_state: QuestState) => {
+    // Clear cache so the new template shows up in the templates list
+    clearStateTemplatesCache();
+  };
+
   const handleSaveAsTemplate = async (questId: number, questData: QuestData) => {
     try {
       const templateName = questData.questName;
       if (!templateName.trim()) {
-        alert('Template name is required. Please set a quest name first.');
         return;
       }
       
       const sanitizedTemplateName = templateName.replace(/[<>:"/\\|?*]/g, '_').trim();
       
       if (!sanitizedTemplateName) {
-        alert('Invalid template name. Please use a quest name with valid characters.');
         return;
       }
+      
+      setTemplateSaveStatus('saving');
       
       const eqfContent = generateEQFContent(questData);
       const configDir = await window.electronAPI.getConfigDir();
@@ -148,18 +157,13 @@ const EditorPage: React.FC<EditorPageProps> = ({
       const templatePath = `${templatesDir}/${templateFileName}`;
       
       await window.electronAPI.ensureDir(templatesDir);
-      const fileExists = await window.electronAPI.fileExists(templatePath);
-      if (fileExists) {
-        if (!confirm(`Template "${sanitizedTemplateName}" already exists. Overwrite?`)) {
-          return;
-        }
-      }
-      
       await window.electronAPI.writeTextFile(templatePath, eqfContent);
       
-      alert(`✅ Quest "${templateName}" has been saved as a template!\n\n📁 Filename: ${templateFileName}\n📂 Location: ${templatesDir}/\n\nYou can now use this template when creating new quests.`);
+      setTemplateSaveStatus('saved');
+      setTimeout(() => setTemplateSaveStatus('idle'), 1500);
     } catch (err) {
-      alert(`❌ Failed to save template: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setTemplateSaveStatus('error');
+      setTimeout(() => setTemplateSaveStatus('idle'), 2000);
       console.error('Error saving template:', err);
     }
   };
@@ -184,13 +188,24 @@ const EditorPage: React.FC<EditorPageProps> = ({
     questData.states.forEach(state => {
       content += `State ${state.name}\n{\n`;
       content += `    desc "${state.description}"\n`;
-      state.actions.forEach(action => {
-        content += `    action ${action.rawText}\n`;
-      });
-
-      state.rules.forEach(rule => {
-        content += `    rule ${rule.rawText}\n`;
-      });
+      
+      // Use items array if present (preserves interleaved order), otherwise fall back to actions then rules
+      if (state.items && state.items.length > 0) {
+        state.items.forEach(item => {
+          if (item.kind === 'action') {
+            content += `    action ${item.data.rawText}\n`;
+          } else {
+            content += `    rule ${item.data.rawText}\n`;
+          }
+        });
+      } else {
+        state.actions.forEach(action => {
+          content += `    action ${action.rawText}\n`;
+        });
+        state.rules.forEach(rule => {
+          content += `    rule ${rule.rawText}\n`;
+        });
+      }
 
       content += '}\n\n';
     });
@@ -315,6 +330,8 @@ const EditorPage: React.FC<EditorPageProps> = ({
                 onExport={exportQuest}
                 onDelete={deleteQuest}
                 onSaveAsTemplate={handleSaveAsTemplate}
+                onSaveStateAsTemplate={handleSaveStateAsTemplate}
+                templateSaveStatus={templateSaveStatus}
                 theme={theme}
               />
             </div>
@@ -338,6 +355,7 @@ const EditorPage: React.FC<EditorPageProps> = ({
           onSave={handleSaveProjectSettings}
         />
       )}
+
     </div>
   );
 };

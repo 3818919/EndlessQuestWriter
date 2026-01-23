@@ -5,7 +5,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
-import { loadTemplates, TemplateData } from '../services/templateService';
+import { loadTemplates, TemplateData, clearTemplatesCache } from '../services/templateService';
 import { EQFParser, QuestData } from '../../eqf-parser';
 import QuestEditor from '../components/quests/QuestEditor';
 
@@ -25,13 +25,11 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
   const [currentQuest, setCurrentQuest] = useState<QuestData | null>(null);
   
   
-  useEffect(() => {
-    loadTemplatesData();
-  }, []);
-  
   const loadTemplatesData = async () => {
     try {
       setLoading(true);
+      // Clear cache to ensure we get fresh data
+      clearTemplatesCache();
       const loadedTemplates = await loadTemplates();
       setTemplates(loadedTemplates);
       setError(null);
@@ -42,6 +40,11 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
       setLoading(false);
     }
   };
+
+  // Load templates on mount and whenever the component is rendered
+  useEffect(() => {
+    loadTemplatesData();
+  }, []);
   
   const handleOpenDialog = (templateFileName?: string) => {
     if (templateFileName && templates[templateFileName]) {
@@ -83,8 +86,13 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
     }
     
     try {
-      
+      // Merge updates with current quest
       const questData = { ...currentQuest, ...updates } as QuestData;
+      
+      // Update the current quest state so the editor reflects the changes
+      setCurrentQuest(questData);
+      
+      // Save to file
       const eqfContent = generateEQFContent(questData);
       const configDir = await window.electronAPI.getConfigDir();
       const templatesDir = `${configDir}/templates`;
@@ -92,10 +100,13 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
       const templatePath = `${templatesDir}/${templateFileName}`;
       
       await window.electronAPI.writeTextFile(templatePath, eqfContent);
-      await loadTemplatesData();
       
-      setSuccessMessage(editingTemplate ? 'Template updated successfully!' : 'Template added successfully!');
-      handleCloseQuestEditor();
+      // Refresh the templates list in the background (don't close editor)
+      clearTemplatesCache();
+      loadTemplates().then(setTemplates);
+      
+      // Don't close the editor - just show a brief success indication
+      // The user can continue editing or manually close when done
     } catch (err) {
       setError(`Failed to save template: ${err instanceof Error ? err.message : 'Unknown error'}`);
       console.error('Error saving template:', err);
@@ -125,13 +136,22 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
       content += `State ${state.name}\n{\n`;
       content += `    desc "${state.description}"\n`;
       
-      state.actions.forEach(action => {
-        content += `    action ${action.rawText}\n`;
-      });
-      
-      state.rules.forEach(rule => {
-        content += `    rule ${rule.rawText}\n`;
-      });
+      if (state.items && state.items.length > 0) {
+        state.items.forEach(item => {
+          if (item.kind === 'action') {
+            content += `    action ${item.data.rawText}\n`;
+          } else {
+            content += `    rule ${item.data.rawText}\n`;
+          }
+        });
+      } else {
+        state.actions.forEach(action => {
+          content += `    action ${action.rawText}\n`;
+        });
+        state.rules.forEach(rule => {
+          content += `    rule ${rule.rawText}\n`;
+        });
+      }
       
       content += '}\n\n';
     });
@@ -167,7 +187,8 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
   };
   
   const handleDeleteTemplate = async (templateFileName: string) => {
-    if (!confirm(`Are you sure you want to delete template "${templateFileName}"?`)) {
+    const displayName = templateFileName.replace(/\.eqf$/i, '');
+    if (!confirm(`Are you sure you want to delete template "${displayName}"?`)) {
       return;
     }
     

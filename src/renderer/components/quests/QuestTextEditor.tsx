@@ -25,6 +25,7 @@ export default function QuestTextEditor({ quest, onSave, navigateToState, onNavi
   const lastSerializedTextRef = useRef<string>('');
   const handleSaveRef = useRef<() => void>(() => {});
   const isOwnSaveRef = useRef(false);
+  const gotoDecorationsRef = useRef<string[]>([]);
 
   
   useEffect(() => {
@@ -257,7 +258,8 @@ export default function QuestTextEditor({ quest, onSave, navigateToState, onNavi
       const line = model.getLineContent(position.lineNumber);
       const column = position.column;
 
-      const gotoPattern = /\bgoto\s+(\w+)/gi;
+      // Use [ \t]+ instead of \s+ to avoid matching across newlines
+      const gotoPattern = /\bgoto[ \t]+(\w+)/gi;
       let match;
       
       while ((match = gotoPattern.exec(line)) !== null) {
@@ -282,7 +284,8 @@ export default function QuestTextEditor({ quest, onSave, navigateToState, onNavi
       const decorations: any[] = [];
       const text = model.getValue();
       const lines = text.split('\n');
-      const gotoPattern = /\bgoto\s+(\w+)/gi;
+      // Use [ \t]+ instead of \s+ to avoid matching across newlines
+      const gotoPattern = /\bgoto[ \t]+(\w+)/gi;
 
       lines.forEach((line: string, lineIndex: number) => {
         let match;
@@ -302,7 +305,8 @@ export default function QuestTextEditor({ quest, onSave, navigateToState, onNavi
         gotoPattern.lastIndex = 0;
       });
 
-      editor.deltaDecorations([], decorations);
+      // Remove old decorations and add new ones
+      gotoDecorationsRef.current = editor.deltaDecorations(gotoDecorationsRef.current, decorations);
     };
 
     updateGotoDecorations();

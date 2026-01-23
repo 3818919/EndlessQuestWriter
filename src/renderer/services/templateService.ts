@@ -58,13 +58,12 @@ export async function loadTemplates(): Promise<Record<string, TemplateData>> {
         if (result?.success && result.data) {
           try {            
             const quest = EQFParser.parse(result.data, 0);
-                        
-            const templateName = quest.questName || filename.replace(/\.eqf$/i, '');
-                        
-            const { id, ...templateData } = quest;
-            templates[templateName] = templateData;
             
-            console.log(`Loaded template: ${templateName}`);
+            // Use filename as key (with .eqf extension) for consistent delete/edit operations
+            const { id, ...templateData } = quest;
+            templates[filename] = templateData;
+            
+            console.log(`Loaded template: ${filename}`);
           } catch (parseError) {
             console.warn(`Failed to parse template ${filename}:`, parseError);
           }

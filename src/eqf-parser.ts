@@ -14,11 +14,19 @@ export interface QuestRule {
   rawText: string;
 }
 
+// Represents an item in a state (either action or rule) with its order preserved
+export type StateItem = 
+  | { kind: 'action'; data: QuestAction }
+  | { kind: 'rule'; data: QuestRule };
+
 export interface QuestState {
   name: string;
   description: string;
   actions: QuestAction[];
   rules: QuestRule[];
+  // Ordered list of actions and rules - preserves interleaved order
+  // If not present, falls back to actions then rules
+  items?: StateItem[];
 }
 
 export interface QuestRandomBlock {
@@ -813,10 +821,18 @@ export class EQFParser {
           currentState.description = this.extractQuotedString(line);
         } else if (line.toLowerCase().startsWith('action')) {
           const action = this.parseAction(line);
-          if (action) currentState.actions.push(action);
+          if (action) {
+            currentState.actions.push(action);
+            currentState.items = currentState.items || [];
+            currentState.items.push({ kind: 'action', data: action });
+          }
         } else if (line.toLowerCase().startsWith('rule')) {
           const rule = this.parseRule(line);
-          if (rule) currentState.rules.push(rule);
+          if (rule) {
+            currentState.rules.push(rule);
+            currentState.items = currentState.items || [];
+            currentState.items.push({ kind: 'rule', data: rule });
+          }
         }
       }
 
@@ -872,12 +888,25 @@ export class EQFParser {
       if (state.description) {
         output += `\tdesc\t"${state.description}"\n`;
       }
-      state.actions.forEach(action => {
-        output += `\taction\t${action.rawText}\n`;
-      });
-      state.rules.forEach(rule => {
-        output += `\trule\t${rule.rawText}\n`;
-      });
+      
+      // Use items array if present (preserves interleaved order), otherwise fall back to actions then rules
+      if (state.items && state.items.length > 0) {
+        state.items.forEach(item => {
+          if (item.kind === 'action') {
+            output += `\taction\t${item.data.rawText}\n`;
+          } else {
+            output += `\trule\t${item.data.rawText}\n`;
+          }
+        });
+      } else {
+        // Fallback for backwards compatibility
+        state.actions.forEach(action => {
+          output += `\taction\t${action.rawText}\n`;
+        });
+        state.rules.forEach(rule => {
+          output += `\trule\t${rule.rawText}\n`;
+        });
+      }
       output += '}\n\n';
     });
 

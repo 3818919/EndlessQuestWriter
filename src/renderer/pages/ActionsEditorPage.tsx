@@ -1,14 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Button,
   TextField,
   Typography,
   Paper,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
   IconButton,
   Dialog,
   DialogTitle,
@@ -24,7 +20,6 @@ import {
   Divider,
   Card,
   CardContent,
-  CardActions,
   Grid,
   Tooltip,
 } from '@mui/material';
@@ -33,6 +28,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import { loadConfig, clearConfigCache, ActionOrRuleDoc, ParamInfo } from '../services/configService';
 
 interface ParamEditor {
@@ -47,10 +43,14 @@ interface ActionsEditorPageProps {
 
 const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
   const [actions, setActions] = useState<Record<string, ActionOrRuleDoc>>({});
+  const [actionOrder, setActionOrder] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
+  // Drag and drop state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAction, setEditingAction] = useState<string | null>(null);
@@ -67,8 +67,11 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
   const loadActions = async () => {
     try {
       setLoading(true);
+      clearConfigCache();
       const config = await loadConfig();
       setActions(config.actions);
+      // Preserve order from file (Object.keys maintains insertion order)
+      setActionOrder(Object.keys(config.actions));
       setError(null);
     } catch (err) {
       setError('Failed to load actions. Please check if config files exist.');
@@ -149,18 +152,49 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
     }
     
     try {
-      
       const configDir = await window.electronAPI.getConfigDir();
       const actionsPath = `${configDir}/actions.ini`;
       const result = await window.electronAPI.readTextFile(actionsPath);
       let content = result.success && result.data ? result.data : '';
+      
       const signature = generateSignature(actionName, params);
-      const newEntry = `\n\n[${actionName}]\nsignature = \`${signature};\`\ndescription = ${description}`;
+      const newSection = `[${actionName}]\nsignature = \`${signature};\`\ndescription = ${description}`;
+      
       if (editingAction && actions[editingAction]) {
-        const oldEntry = `[${editingAction}]\nsignature = \`${actions[editingAction].rawSignature}\`\ndescription = ${actions[editingAction].description}`;
-        content = content.replace(oldEntry, '');
+        // Update in place - replace the existing section
+        const lines = content.split('\n');
+        const newLines: string[] = [];
+        let skipSection = false;
+        let replacedSection = false;
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const trimmed = line.trim();
+          const sectionMatch = trimmed.match(/^\[([^\]]+)\]$/);
+          
+          if (sectionMatch) {
+            if (sectionMatch[1] === editingAction) {
+              // Found the section to replace - insert new content here
+              skipSection = true;
+              replacedSection = true;
+              newLines.push(newSection);
+              continue;
+            } else {
+              skipSection = false;
+            }
+          }
+          
+          if (!skipSection) {
+            newLines.push(line);
+          }
+        }
+        
+        content = newLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+      } else {
+        // Add new entry at the end
+        content = content.trim() + '\n\n' + newSection;
       }
-      content += newEntry;
+      
       await window.electronAPI.writeTextFile(actionsPath, content);
       clearConfigCache();
       await loadActions();
@@ -170,6 +204,73 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
       setError('Failed to save action. Please try again.');
       console.error('Error saving action:', err);
     }
+  };
+  
+  // Save the entire file with new order
+  const saveActionsInOrder = async (orderedNames: string[]) => {
+    try {
+      const configDir = await window.electronAPI.getConfigDir();
+      const actionsPath = `${configDir}/actions.ini`;
+      
+      // Build the file content in the new order
+      const sections: string[] = [];
+      for (const name of orderedNames) {
+        const action = actions[name];
+        if (action) {
+          sections.push(`[${name}]\nsignature = ${action.rawSignature}\ndescription = ${action.description}`);
+        }
+      }
+      
+      const content = sections.join('\n\n');
+      await window.electronAPI.writeTextFile(actionsPath, content);
+      clearConfigCache();
+      setSuccessMessage('Actions reordered successfully!');
+    } catch (err) {
+      setError('Failed to save action order. Please try again.');
+      console.error('Error saving action order:', err);
+    }
+  };
+  
+  // Drag handlers
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+  
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+  
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+  
+  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    
+    // Reorder the array
+    const newOrder = [...actionOrder];
+    const [draggedItem] = newOrder.splice(draggedIndex, 1);
+    newOrder.splice(dropIndex, 0, draggedItem);
+    
+    setActionOrder(newOrder);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    
+    // Save the new order to file
+    await saveActionsInOrder(newOrder);
+  };
+  
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
   
   const handleDeleteAction = async (actionName: string) => {
@@ -185,10 +286,35 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
       if (!result.success || !result.data) {
         throw new Error('Failed to read actions file');
       }
-      let content = result.data;
-      const action = actions[actionName];
-      const entry = `[${actionName}]\nsignature = \`${action.rawSignature}\`\ndescription = ${action.description}`;
-      content = content.replace(entry, '');
+      
+      // Parse the INI file and remove the section
+      const lines = result.data.split('\n');
+      const newLines: string[] = [];
+      let skipSection = false;
+      
+      for (const line of lines) {
+        const trimmed = line.trim();
+        
+        // Check if this is a section header
+        const sectionMatch = trimmed.match(/^\[([^\]]+)\]$/);
+        if (sectionMatch) {
+          if (sectionMatch[1] === actionName) {
+            // Start skipping this section
+            skipSection = true;
+            continue;
+          } else {
+            // New section, stop skipping
+            skipSection = false;
+          }
+        }
+        
+        if (!skipSection) {
+          newLines.push(line);
+        }
+      }
+      
+      // Clean up extra blank lines
+      let content = newLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
       
       await window.electronAPI.writeTextFile(actionsPath, content);
       clearConfigCache();
@@ -258,70 +384,111 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
         </Alert>
       )}
       
-      <Grid container spacing={2}>
-        {Object.entries(actions).map(([name, action]) => (
-          <Grid item xs={12} md={6} lg={4} key={name}>
-            <Card sx={{
-              backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid var(--border-primary)'
-            }}>
-              <CardContent>
-                <Typography variant="h6" component="h2" gutterBottom sx={{ color: 'var(--text-primary)' }}>
-                  {name}
-                </Typography>
-                <Typography variant="body2" gutterBottom sx={{ color: 'var(--text-secondary)' }}>
-                  {action.description}
-                </Typography>
-                <Typography variant="caption" component="div" sx={{ 
-                  mt: 1, 
-                  fontFamily: 'monospace',
-                  color: 'var(--text-primary)'
-                }}>
-                  {action.signature}
-                </Typography>
-                <Box sx={{ mt: 1 }}>
-                  {action.params.map((param, index) => (
-                    <Chip
-                      key={index}
-                      label={`${param.name}: ${param.type}`}
-                      size="small"
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {actionOrder.map((name, index) => {
+          const action = actions[name];
+          if (!action) return null;
+          
+          return (
+            <Card 
+              key={name}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              sx={{
+                backgroundColor: 'var(--bg-secondary)',
+                border: dragOverIndex === index 
+                  ? '2px solid var(--accent-primary)' 
+                  : '1px solid var(--border-primary)',
+                opacity: draggedIndex === index ? 0.5 : 1,
+                transition: 'border 0.2s, opacity 0.2s',
+              }}
+            >
+              <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Tooltip title="Drag to reorder">
+                    <Box
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragEnd={handleDragEnd}
                       sx={{ 
-                        mr: 0.5, 
-                        mb: 0.5,
-                        backgroundColor: param.type === 'string' ? 'var(--accent-primary)' : 'var(--accent-success)',
-                        color: 'white'
+                        cursor: 'grab',
+                        color: 'var(--text-tertiary)',
+                        '&:hover': { color: 'var(--text-primary)' },
+                        '&:active': { cursor: 'grabbing' },
+                        display: 'flex',
+                        alignItems: 'center'
                       }}
-                    />
-                  ))}
+                    >
+                      <DragIndicatorIcon />
+                    </Box>
+                  </Tooltip>
+                  
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                      <Typography variant="h6" component="h2" sx={{ color: 'var(--text-primary)', m: 0 }}>
+                        {name}
+                      </Typography>
+                      <Typography variant="caption" component="div" sx={{ 
+                        fontFamily: 'monospace',
+                        color: 'var(--accent-primary)',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        px: 1,
+                        py: 0.25,
+                        borderRadius: 1
+                      }}>
+                        {action.signature}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mt: 0.5 }}>
+                      {action.description}
+                    </Typography>
+                    {action.params.length > 0 && (
+                      <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {action.params.map((param, paramIndex) => (
+                          <Chip
+                            key={paramIndex}
+                            label={`${param.name}: ${param.type}`}
+                            size="small"
+                            sx={{ 
+                              backgroundColor: param.type === 'string' ? 'var(--accent-primary)' : 'var(--accent-success)',
+                              color: 'white'
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Tooltip title="Edit">
+                      <IconButton 
+                        size="small" 
+                        onClick={() => handleOpenDialog(name)}
+                        sx={{ color: 'var(--text-primary)' }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton 
+                        size="small" 
+                        onClick={() => handleDeleteAction(name)}
+                        sx={{ color: 'var(--accent-danger)' }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </Box>
               </CardContent>
-              <CardActions>
-                <Tooltip title="Edit">
-                  <IconButton 
-                    size="small" 
-                    onClick={() => handleOpenDialog(name)}
-                    sx={{ color: 'var(--text-primary)' }}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Delete">
-                  <IconButton 
-                    size="small" 
-                    onClick={() => handleDeleteAction(name)}
-                    sx={{ color: 'var(--accent-danger)' }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </Tooltip>
-              </CardActions>
             </Card>
-          </Grid>
-        ))}
-      </Grid>
+          );
+        })}
+      </Box>
       
-      {Object.keys(actions).length === 0 && !loading && (
-        <Paper sx={{ 
+      {actionOrder.length === 0 && !loading && (
+        <Card sx={{ 
           p: 3, 
           textAlign: 'center',
           backgroundColor: 'var(--bg-secondary)',
@@ -330,7 +497,7 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
           <Typography variant="body1" sx={{ color: 'var(--text-secondary)' }}>
             No actions found. Add your first action to get started.
           </Typography>
-        </Paper>
+        </Card>
       )}
       
       {/* Edit/Add Dialog */}

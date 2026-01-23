@@ -5,7 +5,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
-import { loadStateTemplates, StateTemplateData } from '../services/stateTemplateService';
+import { loadStateTemplates, StateTemplateData, clearStateTemplatesCache } from '../services/stateTemplateService';
 import StateNodeEditor from '../components/quests/StateNodeEditor';
 import { QuestState, QuestAction, QuestRule } from '../../eqf-parser';
 
@@ -40,6 +40,8 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
   const loadTemplatesData = async () => {
     try {
       setLoading(true);
+      // Clear cache to ensure fresh data
+      clearStateTemplatesCache();
       const loadedTemplates = await loadStateTemplates();
       setTemplates(loadedTemplates);
       setError(null);
@@ -53,20 +55,25 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
   
   const handleOpenDialog = (templateFileName?: string) => {
     if (templateFileName && templates[templateFileName]) {
-      
+      // Editing existing template - open state editor directly
       const template = templates[templateFileName];
       setEditingTemplate(templateFileName);
-      setTemplateName(templateFileName.replace('.eqf', ''));
+      // Remove .eqf extension for display/editing
+      const nameWithoutExt = templateFileName.replace(/\.eqf$/i, '');
+      setTemplateName(nameWithoutExt);
       
+      // Use the template's items array directly to preserve interleaved order
+      // The items array is populated by the parser in the order they appear in the file
       setCurrentState({
-        name: 'TemplateState',
+        name: nameWithoutExt,
         description: template.description,
         actions: [...template.actions],
-        rules: [...template.rules]
+        rules: [...template.rules],
+        items: template.items ? [...template.items] : []
       });
       setStateEditorOpen(true);
     } else {
-      
+      // Creating new template - prompt for name first
       setEditingTemplate(null);
       setTemplateName('');
       setDescription('');
@@ -77,11 +84,14 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
   };
   
   const handleOpenStateEditor = () => {
+    // Called after user enters template name in dialog
+    setDialogOpen(false);
     setCurrentState({
-      name: 'TemplateState',
+      name: templateName || 'NewTemplate',
       description: description,
       actions: [...actions],
-      rules: [...rules]
+      rules: [...rules],
+      items: []
     });
     setStateEditorOpen(true);
   };
@@ -100,45 +110,56 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
   };
   
   const handleSaveStateEditor = async (updates: Partial<QuestState>, nameChanged: boolean, oldName: string) => {
+    // Use the state name as template name if we're creating new
+    // For editing, use the name from the state editor (updates.name) or fall back to templateName
+    const finalTemplateName = templateName || updates.name || 'NewTemplate';
     
-    if (editingTemplate) {
-      try {
-        
-        const configDir = await window.electronAPI.getConfigDir();
-        const statesDir = `${configDir}/templates/states`;
-        const templateFileName = `${templateName}.eqf`;
-        const templatePath = `${statesDir}/${templateFileName}`;
-        let content = `desc "${updates.description || ''}"\n`;
-        
+    if (!finalTemplateName.trim()) {
+      setError('Template name is required');
+      return;
+    }
+    
+    try {
+      const configDir = await window.electronAPI.getConfigDir();
+      const statesDir = `${configDir}/templates/states`;
+      const templateFileName = `${finalTemplateName}.eqf`;
+      const templatePath = `${statesDir}/${templateFileName}`;
+      
+      let content = `desc "${updates.description || ''}"\n`;
+      
+      // Use items array if present (preserves interleaved order)
+      if (updates.items && updates.items.length > 0) {
+        updates.items.forEach(item => {
+          if (item.kind === 'action') {
+            content += `action ${item.data.rawText}\n`;
+          } else {
+            content += `rule ${item.data.rawText}\n`;
+          }
+        });
+      } else {
+        // Fallback to separate arrays
         (updates.actions || []).forEach(action => {
           content += `action ${action.rawText}\n`;
         });
-        
         (updates.rules || []).forEach(rule => {
           content += `rule ${rule.rawText}\n`;
         });
-        
-        await window.electronAPI.ensureDir(statesDir);
-        await window.electronAPI.writeTextFile(templatePath, content.trim());
-        await loadTemplatesData();
-        
-        setSuccessMessage('Template updated successfully!');
-      } catch (err) {
-        setError('Failed to save template. Please try again.');
-        console.error('Error saving template:', err);
       }
-    } else {
       
-      setDescription(updates.description || '');
-      setActions(updates.actions || []);
-      setRules(updates.rules || []);
-    }
-    
-    setStateEditorOpen(false);
-    
-    
-    if (!editingTemplate) {
-      setDialogOpen(true);
+      await window.electronAPI.ensureDir(statesDir);
+      await window.electronAPI.writeTextFile(templatePath, content.trim());
+      
+      // Clear cache and reload
+      clearStateTemplatesCache();
+      await loadTemplatesData();
+      
+      setSuccessMessage(editingTemplate ? 'Template updated successfully!' : 'Template created successfully!');
+      setStateEditorOpen(false);
+      setEditingTemplate(null);
+      setTemplateName('');
+    } catch (err) {
+      setError('Failed to save template. Please try again.');
+      console.error('Error saving template:', err);
     }
   };
   
@@ -188,7 +209,8 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
   };
   
   const handleDeleteTemplate = async (templateFileName: string) => {
-    if (!confirm(`Are you sure you want to delete state template "${templateFileName}"?`)) {
+    const displayName = templateFileName.replace(/\.eqf$/i, '');
+    if (!confirm(`Are you sure you want to delete state template "${displayName}"?`)) {
       return;
     }
     
@@ -198,6 +220,9 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
       const templatePath = `${statesDir}/${templateFileName}`;
       
       await window.electronAPI.deleteFile(templatePath);
+      
+      // Clear cache and reload
+      clearStateTemplatesCache();
       await loadTemplatesData();
       
       setSuccessMessage('Template deleted successfully!');
@@ -324,11 +349,11 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
         </Paper>
       )}
       
-      {/* Edit/Add Dialog */}
+      {/* New Template Name Dialog */}
       <Dialog 
         open={dialogOpen} 
         onClose={handleCloseDialog} 
-        maxWidth="md" 
+        maxWidth="sm" 
         fullWidth
         PaperProps={{
           sx: {
@@ -342,7 +367,7 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
           color: 'var(--text-primary)',
           borderBottom: '1px solid var(--border-primary)'
         }}>
-          {editingTemplate ? `Edit State Template: ${editingTemplate.replace('.eqf', '')}` : 'Add New State Template'}
+          New State Template
         </DialogTitle>
         <DialogContent sx={{ backgroundColor: 'var(--bg-primary)' }}>
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -351,7 +376,8 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
               fullWidth
-              helperText="Filename (without .eqf extension)"
+              autoFocus
+              helperText="Enter a name for your new state template"
               sx={{
                 '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
                 '& .MuiInputBase-input': { color: 'var(--text-primary)' },
@@ -363,63 +389,6 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
                 }
               }}
             />
-            
-            <TextField
-              label="Description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              fullWidth
-              multiline
-              rows={2}
-              helperText="State description"
-              sx={{
-                '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
-                '& .MuiInputBase-input': { color: 'var(--text-primary)' },
-                '& .MuiFormHelperText-root': { color: 'var(--text-tertiary)' },
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: 'var(--border-primary)' },
-                  '&:hover fieldset': { borderColor: 'var(--border-hover)' },
-                  '&.Mui-focused fieldset': { borderColor: 'var(--accent-primary)' }
-                }
-              }}
-            />
-            
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="subtitle2" sx={{ color: 'var(--text-primary)' }}>
-                Actions: {actions.length} | Rules: {rules.length}
-              </Typography>
-              <Button
-                variant="outlined"
-                onClick={handleOpenStateEditor}
-                sx={{
-                  color: 'var(--text-primary)',
-                  borderColor: 'var(--border-primary)',
-                  '&:hover': {
-                    borderColor: 'var(--border-hover)',
-                    backgroundColor: 'var(--bg-hover)'
-                  }
-                }}
-              >
-                Open State Editor
-              </Button>
-            </Box>
-            
-            <Paper sx={{ 
-              p: 2, 
-              backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid var(--border-primary)'
-            }}>
-              <Typography variant="subtitle2" gutterBottom sx={{ color: 'var(--text-primary)' }}>
-                Preview:
-              </Typography>
-              <Typography variant="body2" fontFamily="monospace" sx={{ 
-                color: 'var(--text-primary)',
-                whiteSpace: 'pre-wrap',
-                fontSize: '12px'
-              }}>
-                {generateStateTemplateContent()}
-              </Typography>
-            </Paper>
           </Box>
         </DialogContent>
         <DialogActions sx={{ 
@@ -434,9 +403,9 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
             Cancel
           </Button>
           <Button 
-            onClick={handleSaveTemplate} 
+            onClick={handleOpenStateEditor} 
             variant="contained" 
-            startIcon={<SaveIcon />}
+            disabled={!templateName.trim()}
             sx={{
               backgroundColor: 'var(--accent-primary)',
               '&:hover': {
@@ -444,7 +413,7 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
               }
             }}
           >
-            {editingTemplate ? 'Update Template' : 'Add Template'}
+            Continue to Editor
           </Button>
         </DialogActions>
       </Dialog>
@@ -479,6 +448,7 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
               allStates={[currentState]}
               onClose={handleCloseStateEditor}
               onSave={handleSaveStateEditor}
+              isTemplateMode={true}
             />
           </DialogContent>
         </Dialog>

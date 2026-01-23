@@ -1,6 +1,6 @@
 {
   "name": "endless-quest-writer",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Visual editor for Endless Online quest files",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -83,7 +83,8 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "assets/icon.icns"
+      "icon": "assets/icon.icns",
+      "artifactName": "Endless.Quest.Writer-${version}.${ext}"
     },
     "win": {
       "target": {
@@ -105,11 +106,12 @@
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": true,
       "menuCategory": "Development",
-      "artifactName": "${productName} Setup ${version}.${ext}"
+      "artifactName": "Endless.Quest.Writer.Setup.${version}.${ext}"
     },
     "linux": {
       "target": "AppImage",
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "artifactName": "Endless.Quest.Writer-${version}.${ext}"
     }
   }
 }

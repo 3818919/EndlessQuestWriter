@@ -186,7 +186,7 @@ function createSplashWindow() {
           <div class="progress-text" id="progress-text">0%</div>
         </div>
         
-        <div class="version-text">Version 1.0.0</div>
+        <div class="version-text">Version ${app.getVersion()}</div>
       </div>
       
       <script>

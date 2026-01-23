@@ -1,0 +1,8 @@
+desc "Talk to NPC"
+action AddNpcText(0, "Oh dear, oh my.. whatever shall I do?");
+action AddNpcText(0, "Please help! You're the only one that can");
+action AddNpcText(0, "[Quest Reward: 5,000exp]");
+action AddNpcInput(0, 1, "Accept Quest");
+action AddNpcInput(0, 1, "Decline Quest");
+rule InputNpc(1) goto 
+rule InputNpc(2) goto

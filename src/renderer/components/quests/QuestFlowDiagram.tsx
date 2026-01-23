@@ -25,6 +25,7 @@ interface QuestFlowDiagramProps {
   onQuestChange: (updates: Partial<QuestData>) => void;
   onNavigateToState?: (stateName: string) => void;
   highlightState?: string | null;
+  onSaveStateAsTemplate?: (state: QuestState) => void;
 }
 
 
@@ -306,7 +307,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
   return { nodes: layoutedNodes, edges };
 };
 
-export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToState, highlightState }: QuestFlowDiagramProps) {
+export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToState, highlightState, onSaveStateAsTemplate }: QuestFlowDiagramProps) {
   const [editingState, setEditingState] = useState<{ state: QuestState; index: number } | null>(null);
 
   
@@ -1043,6 +1044,7 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
           onClose={() => setEditingState(null)}
           onSave={(updates, nameChanged, oldName) => handleStateUpdate(editingState.index, updates, nameChanged, oldName)}
           onCreateState={handleCreateState}
+          onSaveAsTemplate={onSaveStateAsTemplate}
         />
       )}
     </div>

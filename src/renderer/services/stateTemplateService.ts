@@ -4,12 +4,13 @@
  * (description, actions, rules) without the full quest structure.
  */
 
-import { QuestAction, QuestRule } from '../../eqf-parser';
+import { QuestAction, QuestRule, StateItem } from '../../eqf-parser';
 
 export interface StateTemplateData {
   description: string;
   actions: QuestAction[];
   rules: QuestRule[];
+  items: StateItem[]; // Preserves interleaved order of actions and rules
 }
 
 let stateTemplatesCache: Record<string, StateTemplateData> | null = null;
@@ -21,13 +22,16 @@ let stateTemplatesLoadPromise: Promise<Record<string, StateTemplateData>> | null
  *   desc    "Description"
  *   action  ActionName(params);
  *   rule    RuleName(params) goto StateName
+ * 
+ * The items array preserves the original order of actions and rules as they appear in the file.
  */
 function parseStateTemplate(content: string): StateTemplateData {
   const lines = content.split('\n');
   const template: StateTemplateData = {
     description: '',
     actions: [],
-    rules: []
+    rules: [],
+    items: [] // Preserves interleaved order
   };
 
   for (const line of lines) {
@@ -49,11 +53,13 @@ function parseStateTemplate(content: string): StateTemplateData {
         const type = actionMatch[1];
         const paramsStr = actionMatch[2];
         const params = parseParams(paramsStr);
-        template.actions.push({
+        const action: QuestAction = {
           type,
           params,
           rawText: `${type}(${paramsStr})${trimmed.includes(';') ? ';' : ''}`
-        });
+        };
+        template.actions.push(action);
+        template.items.push({ kind: 'action', data: action });
       }
       continue;
     }
@@ -65,12 +71,14 @@ function parseStateTemplate(content: string): StateTemplateData {
         const paramsStr = ruleMatch[2];
         const gotoState = ruleMatch[3];
         const params = parseParams(paramsStr);
-        template.rules.push({
+        const rule: QuestRule = {
           type,
           params,
           gotoState,
           rawText: `${type}(${paramsStr}) goto ${gotoState}`
-        });
+        };
+        template.rules.push(rule);
+        template.items.push({ kind: 'rule', data: rule });
       }
       continue;
     }
@@ -174,11 +182,11 @@ export async function loadStateTemplates(): Promise<Record<string, StateTemplate
         if (result?.success && result.data) {
           try {            
             const stateTemplate = parseStateTemplate(result.data);
-                        
-            const templateName = filename.replace(/\.eqf$/i, '');
-            templates[templateName] = stateTemplate;
             
-            console.log(`Loaded state template: ${templateName}`);
+            // Use filename with .eqf extension as key for consistent delete/edit operations
+            templates[filename] = stateTemplate;
+            
+            console.log(`Loaded state template: ${filename}`);
           } catch (parseError) {
             console.warn(`Failed to parse state template ${filename}:`, parseError);
           }

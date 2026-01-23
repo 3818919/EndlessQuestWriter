@@ -1,2 +1,2 @@
-	desc	"Reset"
-	action	Reset();
+desc "Reset"
+action Reset();
