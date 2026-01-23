@@ -78,7 +78,7 @@
 - **Status Indicators** — See last saved time and quest statistics
 
 ![f4kpmPe.md.gif](https://cdn.jumpshare.com/preview/F6FiMyBIJwyc6Uklz1W_VQGGjcFtiqV-DNql9xKmO5Npp0a0Sue8EktPBZ8oCC4v0NKtlUvYYE0pMQG9igdqBXoYvi4zS_nPzHmRUFuT_DQ)
-![f4kpO9R.md.gif](https://cdn.jumpshare.com/preview/Hsnp2vStUC2K1pq9mvfqntCbSSjJXxW4_hfD4EbJW5qDfDQiw7NSlko7UyOOxdip0NKtlUvYYE0pMQG9igdqBVMnTe-bY0BLpNIU1Dm8mck)
+
 
 ---
 
