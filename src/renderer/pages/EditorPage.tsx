@@ -128,24 +128,38 @@ const EditorPage: React.FC<EditorPageProps> = ({
 
   const handleSaveAsTemplate = async (questId: number, questData: QuestData) => {
     try {
-  
       const templateName = questData.questName;
       if (!templateName.trim()) {
-        alert('Template name is required');
+        alert('Template name is required. Please set a quest name first.');
         return;
       }
+      
+      const sanitizedTemplateName = templateName.replace(/[<>:"/\\|?*]/g, '_').trim();
+      
+      if (!sanitizedTemplateName) {
+        alert('Invalid template name. Please use a quest name with valid characters.');
+        return;
+      }
+      
       const eqfContent = generateEQFContent(questData);
       const configDir = await window.electronAPI.getConfigDir();
       const templatesDir = `${configDir}/templates`;
-      const templateFileName = `${templateName}.eqf`;
+      const templateFileName = `${sanitizedTemplateName}.eqf`;
       const templatePath = `${templatesDir}/${templateFileName}`;
       
-  
+      await window.electronAPI.ensureDir(templatesDir);
+      const fileExists = await window.electronAPI.fileExists(templatePath);
+      if (fileExists) {
+        if (!confirm(`Template "${sanitizedTemplateName}" already exists. Overwrite?`)) {
+          return;
+        }
+      }
+      
       await window.electronAPI.writeTextFile(templatePath, eqfContent);
       
-      alert(`Template "${templateName}" saved successfully!`);
+      alert(`✅ Quest "${templateName}" has been saved as a template!\n\n📁 Filename: ${templateFileName}\n📂 Location: ${templatesDir}/\n\nYou can now use this template when creating new quests.`);
     } catch (err) {
-      alert(`Failed to save template: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      alert(`❌ Failed to save template: ${err instanceof Error ? err.message : 'Unknown error'}`);
       console.error('Error saving template:', err);
     }
   };
@@ -180,6 +194,20 @@ const EditorPage: React.FC<EditorPageProps> = ({
 
       content += '}\n\n';
     });
+    
+    if (questData.randomBlocks && questData.randomBlocks.length > 0) {
+      questData.randomBlocks.forEach(block => {
+        content += `Random ${block.name}\n{\n`;
+        block.entries.forEach(entry => {
+          if (entry.type === 'coord') {
+            content += `    coord ${entry.params.join(' ')}\n`;
+          } else if (entry.type === 'item') {
+            content += `    item ${entry.params.join(' ')}\n`;
+          }
+        });
+        content += '}\n\n';
+      });
+    }
     
     return content.trim();
   };

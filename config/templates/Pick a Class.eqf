@@ -1,0 +1,172 @@
+quest "Pick a Class"
+version 1
+hidden
+
+State Begin
+{
+    desc "Speak with Wise Man"
+    action AddNpcText(4, "Hello stranger, what can I do for you?");
+    action AddNpcInput(4, 1, "Class menu");
+    action AddNpcInput(4, 2, "Karma menu");
+    rule StatLess("karma", 200) goto BadKarma
+    rule InputNpc(1) goto Class
+    rule InputNpc(2) goto Karma
+}
+
+State BadKarma
+{
+    desc ""
+    action AddNpcText(4, "Ewww, you look demonic.. Well what do you want? I don't have all day.");
+    action AddNpcInput(4, 1, "Class menu");
+    action AddNpcInput(4, 2, "Karma menu");
+    rule InputNpc(1) goto Class
+    rule InputNpc(2) goto Karma
+}
+
+State Karma
+{
+    desc "Speak with Wise Man"
+    action AddNpcText(4, "So you want some good karma? Well it's going to cost you, how bad do you want it?");
+    action AddNpcInput(4, 1, "Donate 1000g");
+    action AddNpcInput(4, 2, "Donate 5000g");
+    action AddNpcInput(4, 3, "Donate 10,000g");
+    action AddNpcInput(4, 4, "Slap Wise Man");
+    action AddNpcInput(4, 5, "Back");
+    rule InputNpc(1) goto CheckGold1
+    rule InputNpc(2) goto CheckGold2
+    rule InputNpc(3) goto CheckGold3
+    rule InputNpc(4) goto Take100
+    rule InputNpc(5) goto Begin
+}
+
+State Class
+{
+    desc "Speak with Wise Man"
+    action AddNpcText(4, "This is the Class Menu. Make sure and pick the right class you're interested in practicing.");
+    action AddNpcInput(4, 1, "Make me Priest");
+    action AddNpcInput(4, 2, "Make me Magician");
+    action AddNpcInput(4, 3, "Make me Rogue");
+    action AddNpcInput(4, 4, "Make me Archer");
+    action AddNpcInput(4, 5, "Make me Warrior");
+    action AddNpcInput(4, 6, "Back");
+    rule InputNpc(1) goto Priest
+    rule InputNpc(2) goto Magician
+    rule InputNpc(3) goto Rogue
+    rule InputNpc(4) goto Archer
+    rule InputNpc(5) goto Warrior
+    rule InputNpc(6) goto Begin
+}
+
+State Priest
+{
+    desc ""
+    action ShowHint("Class base stats: 2 int");
+    action SetClass(2);
+    action Reset();
+}
+
+State Magician
+{
+    desc ""
+    action ShowHint("Class base stats: 2 wis");
+    action SetClass(3);
+    action Reset();
+}
+
+State Rogue
+{
+    desc ""
+    action ShowHint("Class base stats: 2 agi, 2 con");
+    action SetClass(4);
+    action Reset();
+}
+
+State Archer
+{
+    desc ""
+    action ShowHint("Class base stats: 2 agi");
+    action SetClass(5);
+    action Reset();
+}
+
+State Warrior
+{
+    desc ""
+    action ShowHint("Class base stats: 2 str");
+    action SetClass(6);
+    action Reset();
+}
+
+State Take100
+{
+    desc ""
+    action AddNpcChat(4, "That's it! I'm removing 1000 karma from you for that!");
+    action RemoveKarma(1000);
+    action ShowHint("You lost 1000 Karma");
+    action Reset();
+}
+
+State CheckGold1
+{
+    desc ""
+    action AddNpcText(4, "What do I look like.. a charity? Come back when you have some gold to donate!");
+    rule GotItems(1,1000) goto Give10
+    rule TalkedToNpc(4) goto WastedTime
+}
+
+State CheckGold2
+{
+    desc ""
+    action AddNpcText(4, "What do I look like.. a charity? Come back when you have some gold to donate!");
+    rule GotItems(1,5000) goto Give50
+    rule TalkedToNpc(4) goto WastedTime
+}
+
+State CheckGold3
+{
+    desc ""
+    action AddNpcText(4, "What do I look like.. a charity? Come back when you have some gold to donate!");
+    rule GotItems(1,10000) goto Give100
+    rule TalkedToNpc(4) goto WastedTime
+}
+
+State Give10
+{
+    desc ""
+    action RemoveItem(1,1000);
+    action PlaySound(26);
+    action GiveKarma(10);
+    action ShowHint("You donated 1000g & gained 10 Karma");
+    action PlaySound(18);
+    action Reset();
+}
+
+State Give50
+{
+    desc ""
+    action RemoveItem(1,5000);
+    action PlaySound(26);
+    action GiveKarma(50);
+    action ShowHint("You donated 5000g & gained 50 Karma");
+    action PlaySound(18);
+    action Reset();
+}
+
+State Give100
+{
+    desc ""
+    action RemoveItem(1,10000);
+    action PlaySound(26);
+    action GiveKarma(100);
+    action ShowHint("You donated 10,000g & gained 100 Karma");
+    action PlaySound(18);
+    action Reset();
+}
+
+State WastedTime
+{
+    desc ""
+    action RemoveKarma(10);
+    action ShowHint("You lost 10 Karma for wasting the Wise Man's time");
+    action Reset();
+}

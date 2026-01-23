@@ -204,14 +204,31 @@ export class AppUpdater extends EventEmitter {
   
   async downloadAndInstallUpdate(updateInfo: UpdateInfo): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.once('update-downloaded', () => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Timeout waiting for update download'));
+      }, 300000); 
+      
+      const onDownloaded = () => {
+        clearTimeout(timeout);
+        this.removeListener('error', onError);
         resolve();
-      });
-
-      this.once('error', (error) => {
+      };
+      
+      const onError = (error: Error) => {
+        clearTimeout(timeout);
+        this.removeListener('update-downloaded', onDownloaded);
         reject(error);
-      });
-
+      };
+      
+      this.once('update-downloaded', onDownloaded);
+      this.once('error', onError);
+      
+      if (this.updateDownloaded) {
+        clearTimeout(timeout);
+        resolve();
+        return;
+      }
+      
       this.downloadUpdate().catch(reject);
     });
   }

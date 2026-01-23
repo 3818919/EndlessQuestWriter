@@ -343,10 +343,7 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete, onSaveA
           <button
             onClick={() => {
               if (quest) {
-                const templateName = prompt('Enter template name:', quest.questName);
-                if (templateName) {
-                  onSaveAsTemplate(quest.id, { ...quest, questName: templateName });
-                }
+                onSaveAsTemplate(quest.id, quest);
               }
             }}
             style={{
@@ -361,7 +358,7 @@ export default function QuestEditor({ quest, onSave, onExport, onDelete, onSaveA
               alignItems: 'center',
               gap: '4px'
             }}
-            title="Save as Template"
+            title="Save current quest as a template"
           >
             <SaveAsIcon fontSize="small" />
             Save as Template

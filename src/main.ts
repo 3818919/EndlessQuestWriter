@@ -815,9 +815,15 @@ ipcMain.handle('updater:checkForUpdates', async () => {
 
 ipcMain.handle('updater:downloadAndInstall', async () => {
   try {
+    const result = await appUpdater.checkForUpdatesOnStartup();
     
-    return { success: true };
+    if (!result.hasUpdate || !result.updateInfo) {
+      return { success: false, error: 'No update available' };
+    }
+    await appUpdater.downloadAndInstallUpdate(result.updateInfo);
+    return { success: true, message: 'Update downloaded and will be installed on restart' };
   } catch (error) {
+    console.error('Error in downloadAndInstall:', error);
     return { success: false, error: error.message };
   }
 });
