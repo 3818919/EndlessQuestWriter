@@ -109,21 +109,8 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
     }
 
     if (!newProjectServerPath.trim()) {
-      alert('Please select a server directory');
+      alert('Please select a directory');
       return;
-    }
-
-    
-    if (window.electronAPI) {
-      const questsPath = `${newProjectServerPath}/data/quests`;
-      const questsExists = await window.electronAPI.fileExists(questsPath);
-      
-      if (!questsExists) {
-        const createQuests = confirm('The selected directory does not have a "data/quests" folder. Would you like to create one?');
-        if (createQuests) {
-          await window.electronAPI.ensureDir(questsPath);
-        }
-      }
     }
 
     await onLinkProject(newProjectName.trim(), newProjectServerPath.trim());
@@ -140,7 +127,6 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
     const result = await window.electronAPI.selectFolder();
     if (result.success && result.path) {
       setNewProjectServerPath(result.path);
-      
       
       if (!newProjectName.trim()) {
         const folderName = result.path.split('/').pop() || result.path.split('\\').pop() || '';
@@ -273,16 +259,16 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
             </div>
 
             <div className="form-group">
-              <label>Server Directory</label>
+              <label>Directory</label>
               <p className="form-help">
-                Select the root directory of your EOSERV server (contains data/, quests/, etc.)
+                Select either the root directory of your EOSERV server (contains data/quests/) or the quests folder directly. The application will automatically detect which type of directory you selected.
               </p>
               <div className="input-with-button">
                 <input
                   type="text"
                   value={newProjectServerPath}
                   onChange={(e) => setNewProjectServerPath(e.target.value)}
-                  placeholder="/path/to/server"
+                  placeholder="/path/to/server or /path/to/quests"
                   className="form-control"
                   readOnly={isElectron}
                 />

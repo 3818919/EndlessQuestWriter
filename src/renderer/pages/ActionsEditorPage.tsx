@@ -29,7 +29,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import { loadConfig, clearConfigCache, ActionOrRuleDoc, ParamInfo } from '../services/configService';
+import { loadConfig, clearConfigCache, saveActionsConfig, ActionOrRuleDoc, ParamInfo } from '../services/configService';
 
 interface ParamEditor {
   name: string;
@@ -39,16 +39,15 @@ interface ParamEditor {
 
 interface ActionsEditorPageProps {
   theme: 'dark' | 'light';
+  projectPath?: string;
 }
 
-const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
+const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme, projectPath }) => {
   const [actions, setActions] = useState<Record<string, ActionOrRuleDoc>>({});
   const [actionOrder, setActionOrder] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
-  // Drag and drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   
@@ -62,15 +61,14 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
   
   useEffect(() => {
     loadActions();
-  }, []);
+  }, [projectPath]);
   
   const loadActions = async () => {
     try {
       setLoading(true);
-      clearConfigCache();
-      const config = await loadConfig();
+      clearConfigCache(projectPath);
+      const config = await loadConfig(projectPath);
       setActions(config.actions);
-      // Preserve order from file (Object.keys maintains insertion order)
       setActionOrder(Object.keys(config.actions));
       setError(null);
     } catch (err) {
@@ -151,53 +149,34 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
       return;
     }
     
+    if (!projectPath) {
+      setError('No project selected. Please select a project first.');
+      return;
+    }
+    
     try {
-      const configDir = await window.electronAPI.getConfigDir();
-      const actionsPath = `${configDir}/actions.ini`;
-      const result = await window.electronAPI.readTextFile(actionsPath);
-      let content = result.success && result.data ? result.data : '';
-      
       const signature = generateSignature(actionName, params);
-      const newSection = `[${actionName}]\nsignature = \`${signature};\`\ndescription = ${description}`;
+      const newAction: ActionOrRuleDoc = {
+        signature: `${signature};`,
+        description: description.trim(),
+        params: params.map(p => ({ name: p.name, type: p.type })),
+        rawSignature: `\`${signature};\``
+      };
+
+      const newActions = { ...actions };
       
-      if (editingAction && actions[editingAction]) {
-        // Update in place - replace the existing section
-        const lines = content.split('\n');
-        const newLines: string[] = [];
-        let skipSection = false;
-        let replacedSection = false;
-        
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          const trimmed = line.trim();
-          const sectionMatch = trimmed.match(/^\[([^\]]+)\]$/);
-          
-          if (sectionMatch) {
-            if (sectionMatch[1] === editingAction) {
-              // Found the section to replace - insert new content here
-              skipSection = true;
-              replacedSection = true;
-              newLines.push(newSection);
-              continue;
-            } else {
-              skipSection = false;
-            }
-          }
-          
-          if (!skipSection) {
-            newLines.push(line);
-          }
-        }
-        
-        content = newLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-      } else {
-        // Add new entry at the end
-        content = content.trim() + '\n\n' + newSection;
+      if (editingAction && editingAction !== actionName) {
+        delete newActions[editingAction];
+        const newOrder = actionOrder.map(name => name === editingAction ? actionName : name);
+        setActionOrder(newOrder);
+      } else if (!editingAction) {
+        setActionOrder([...actionOrder, actionName]);
       }
       
-      await window.electronAPI.writeTextFile(actionsPath, content);
-      clearConfigCache();
-      await loadActions();
+      newActions[actionName] = newAction;
+      setActions(newActions);
+
+      await saveActionsConfig(projectPath, newActions);
       setSuccessMessage(editingAction ? 'Action updated successfully!' : 'Action added successfully!');
       handleCloseDialog();
     } catch (err) {
@@ -206,24 +185,21 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
     }
   };
   
-  // Save the entire file with new order
   const saveActionsInOrder = async (orderedNames: string[]) => {
+    if (!projectPath) {
+      setError('No project selected');
+      return;
+    }
+    
     try {
-      const configDir = await window.electronAPI.getConfigDir();
-      const actionsPath = `${configDir}/actions.ini`;
-      
-      // Build the file content in the new order
-      const sections: string[] = [];
+      const orderedActions: Record<string, ActionOrRuleDoc> = {};
       for (const name of orderedNames) {
-        const action = actions[name];
-        if (action) {
-          sections.push(`[${name}]\nsignature = ${action.rawSignature}\ndescription = ${action.description}`);
+        if (actions[name]) {
+          orderedActions[name] = actions[name];
         }
       }
       
-      const content = sections.join('\n\n');
-      await window.electronAPI.writeTextFile(actionsPath, content);
-      clearConfigCache();
+      await saveActionsConfig(projectPath, orderedActions);
       setSuccessMessage('Actions reordered successfully!');
     } catch (err) {
       setError('Failed to save action order. Please try again.');
@@ -231,7 +207,6 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
     }
   };
   
-  // Drag handlers
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
   };
@@ -254,8 +229,7 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
       setDragOverIndex(null);
       return;
     }
-    
-    // Reorder the array
+
     const newOrder = [...actionOrder];
     const [draggedItem] = newOrder.splice(draggedIndex, 1);
     newOrder.splice(dropIndex, 0, draggedItem);
@@ -263,8 +237,6 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
     setActionOrder(newOrder);
     setDraggedIndex(null);
     setDragOverIndex(null);
-    
-    // Save the new order to file
     await saveActionsInOrder(newOrder);
   };
   
@@ -273,52 +245,26 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
     setDragOverIndex(null);
   };
   
-  const handleDeleteAction = async (actionName: string) => {
-    if (!confirm(`Are you sure you want to delete action "${actionName}"?`)) {
+  const handleDeleteAction = async (actionNameToDelete: string) => {
+    if (!confirm(`Are you sure you want to delete action "${actionNameToDelete}"?`)) {
+      return;
+    }
+    
+    if (!projectPath) {
+      setError('No project selected');
       return;
     }
     
     try {
-      const configDir = await window.electronAPI.getConfigDir();
-      const actionsPath = `${configDir}/actions.ini`;
+      const newActions = { ...actions };
+      delete newActions[actionNameToDelete];
       
-      const result = await window.electronAPI.readTextFile(actionsPath);
-      if (!result.success || !result.data) {
-        throw new Error('Failed to read actions file');
-      }
+      const newOrder = actionOrder.filter(name => name !== actionNameToDelete);
       
-      // Parse the INI file and remove the section
-      const lines = result.data.split('\n');
-      const newLines: string[] = [];
-      let skipSection = false;
+      setActions(newActions);
+      setActionOrder(newOrder);
       
-      for (const line of lines) {
-        const trimmed = line.trim();
-        
-        // Check if this is a section header
-        const sectionMatch = trimmed.match(/^\[([^\]]+)\]$/);
-        if (sectionMatch) {
-          if (sectionMatch[1] === actionName) {
-            // Start skipping this section
-            skipSection = true;
-            continue;
-          } else {
-            // New section, stop skipping
-            skipSection = false;
-          }
-        }
-        
-        if (!skipSection) {
-          newLines.push(line);
-        }
-      }
-      
-      // Clean up extra blank lines
-      let content = newLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-      
-      await window.electronAPI.writeTextFile(actionsPath, content);
-      clearConfigCache();
-      await loadActions();
+      await saveActionsConfig(projectPath, newActions);
       setSuccessMessage('Action deleted successfully!');
     } catch (err) {
       setError('Failed to delete action. Please try again.');
@@ -330,6 +276,17 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
     return (
       <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
         <Typography>Loading actions...</Typography>
+      </Box>
+    );
+  }
+  
+  if (!projectPath) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', flexDirection: 'column', gap: 2 }}>
+        <Typography variant="h6" sx={{ color: 'var(--text-secondary)' }}>No Project Selected</Typography>
+        <Typography sx={{ color: 'var(--text-tertiary)' }}>
+          Please select a project to edit its actions configuration.
+        </Typography>
       </Box>
     );
   }
@@ -371,7 +328,7 @@ const ActionsEditorPage: React.FC<ActionsEditorPageProps> = ({ theme }) => {
         mb: 3, 
         color: 'var(--text-secondary)' 
       }}>
-        Manage quest actions that can be used in quest scripts. Actions are defined in config/actions.ini.
+        Manage quest actions for this project. Actions are stored in the project's actions.json file.
       </Typography>
       
       {error && (

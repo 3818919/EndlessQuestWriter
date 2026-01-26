@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import FolderIcon from '@mui/icons-material/Folder';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
-import UpdateIcon from '@mui/icons-material/SystemUpdate';
 import UpdateNotification from './UpdateNotification';
 
 interface ProjectSettingsProps {
@@ -109,7 +108,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         </div>
 
         <div className="form-group" style={{ marginTop: '20px' }}>
-          <label>Server Directory</label>
+          <label>Directory</label>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <input
               type="text"
@@ -128,7 +127,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             </button>
           </div>
           <div className="form-help" style={{ marginTop: '4px' }}>
-            Path to your EOSERV server directory (contains data/, quests/, etc.)
+            Path to your EOSERV server directory or quests folder. The application will automatically detect the directory type.
           </div>
         </div>
 

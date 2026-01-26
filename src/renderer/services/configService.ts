@@ -1,5 +1,8 @@
 /**
- * Service for loading and parsing external configuration files (actions.ini, rules.ini)
+ * Service for loading and parsing configuration files (actions.json, rules.json)
+ * 
+ * Config files are now stored per-project in the project settings directory.
+ * Format has changed from INI to JSON for better structure and easier parsing.
  */
 
 export interface ParamInfo {
@@ -19,132 +22,60 @@ export interface ConfigData {
   rules: Record<string, ActionOrRuleDoc>;
 }
 
-/**
- * Parse parameters from a signature string like `ActionName(param1, "param2");`
- * Parameters in double quotes are strings, others are integers
- */
-function parseParamsFromSignature(signature: string): ParamInfo[] {  
-  const match = signature.match(/\(([^)]*)\)/);
-  if (!match || !match[1].trim()) return [];
-  
-  const paramsStr = match[1];
-  const params: ParamInfo[] = [];
-    
-  let current = '';
-  let inQuotes = false;
-  
-  for (let i = 0; i < paramsStr.length; i++) {
-    const char = paramsStr[i];
-    
-    if (char === '"') {
-      inQuotes = !inQuotes;
-      current += char;
-    } else if (char === ',' && !inQuotes) {
-      const param = current.trim();
-      if (param) {
-        params.push(parseParamType(param));
-      }
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-    
-  const lastParam = current.trim();
-  if (lastParam) {
-    params.push(parseParamType(lastParam));
-  }
-  
-  return params;
+export interface ActionJsonEntry {
+  description: string;
+  params: ParamInfo[];
 }
 
-/**
- * Determine if a parameter is a string or integer based on whether it's in quotes
- */
-function parseParamType(param: string): ParamInfo {  
-  const cleanParam = param.replace(/`/g, '');
-    
-  if (cleanParam.startsWith('"') && cleanParam.endsWith('"')) {    
-    const name = cleanParam.slice(1, -1);
-    return { name, type: 'string' };
-  }
-    
-  return { name: cleanParam, type: 'integer' };
+export interface RuleJsonEntry {
+  description: string;
+  params: ParamInfo[];
 }
 
+export type ActionsJson = Record<string, ActionJsonEntry>;
+export type RulesJson = Record<string, RuleJsonEntry>;
+
 /**
- * Parse an INI file content into a record of action/rule definitions
+ * Generate a signature string from action/rule name and params
  */
-function parseIniContent(content: string): Record<string, ActionOrRuleDoc> {
-  const result: Record<string, ActionOrRuleDoc> = {};
-  const lines = content.split('\n');
-  
-  let currentSection: string | null = null;
-  let currentData: { signature?: string; description?: string } = {};
-  
-  for (const line of lines) {
-    const trimmed = line.trim();
-        
-    if (!trimmed || trimmed.startsWith(';')) {
-      continue;
+function generateSignature(name: string, params: ParamInfo[], isAction: boolean): string {
+  const paramStrings = params.map(param => {
+    if (param.type === 'string') {
+      return `"${param.name}"`;
     }
-    const sectionMatch = trimmed.match(/^\[([^\]]+)\]$/);
-    if (sectionMatch) {      
-      if (currentSection && currentData.signature && currentData.description) {
-        const params = parseParamsFromSignature(currentData.signature);
-        result[currentSection] = {
-          signature: currentData.signature,
-          description: currentData.description,
-          params,
-          rawSignature: currentData.signature
-        };
-      }
-            
-      currentSection = sectionMatch[1];
-      currentData = {};
-      continue;
-    }
-        
-    const keyValueMatch = trimmed.match(/^(\w+)\s*=\s*(.+)$/);
-    if (keyValueMatch && currentSection) {
-      const [, key, value] = keyValueMatch;
-      if (key === 'signature') {
-        currentData.signature = value;
-      } else if (key === 'description') {
-        currentData.description = value;
-      }
-    }
-  }
-    
-  if (currentSection && currentData.signature && currentData.description) {
-    const params = parseParamsFromSignature(currentData.signature);
-    result[currentSection] = {
-      signature: currentData.signature,
-      description: currentData.description,
-      params,
-      rawSignature: currentData.signature
-    };
-  }
-  
-  return result;
+    return param.name;
+  });
+  const signature = `${name}(${paramStrings.join(', ')})`;
+  return isAction ? `${signature};` : signature;
 }
 
-let configCache: ConfigData | null = null;
-let configLoadPromise: Promise<ConfigData> | null = null;
 
 /**
- * Load actions and rules configuration from external INI files
+ * Convert internal ConfigData format to JSON format for saving
  */
-export async function loadConfig(): Promise<ConfigData> {  
-  if (configCache) {
-    return configCache;
-  }
-    
-  if (configLoadPromise) {
-    return configLoadPromise;
+let configCache: Map<string, ConfigData> = new Map();
+let configLoadPromises: Map<string, Promise<ConfigData>> = new Map();
+
+/**
+ * Load actions and rules configuration for a specific project
+ * @param projectPath - The project settings directory path (e.g., ~/.endless-quest-writer/MyProject)
+ */
+export async function loadConfig(projectPath?: string): Promise<ConfigData> {
+  if (!projectPath) {
+    return loadGlobalConfig();
   }
   
-  configLoadPromise = (async () => {
+  const cacheKey = projectPath;
+  
+  if (configCache.has(cacheKey)) {
+    return configCache.get(cacheKey)!;
+  }
+    
+  if (configLoadPromises.has(cacheKey)) {
+    return configLoadPromises.get(cacheKey)!;
+  }
+  
+  const loadPromise = (async () => {
     const config: ConfigData = {
       actions: {},
       rules: {}
@@ -156,34 +87,189 @@ export async function loadConfig(): Promise<ConfigData> {
     }
     
     try {
-      const configDir = await window.electronAPI.getConfigDir();
-            
-      const actionsPath = `${configDir}/actions.ini`;
+      const actionsPath = `${projectPath}/actions.json`;
       const actionsResult = await window.electronAPI.readTextFile(actionsPath);
+      
       if (actionsResult.success && actionsResult.data) {
-        config.actions = parseIniContent(actionsResult.data);
-        console.log(`Loaded ${Object.keys(config.actions).length} actions from config`);
+        try {
+          const actionsJson: ActionsJson = JSON.parse(actionsResult.data);
+          for (const [name, entry] of Object.entries(actionsJson)) {
+            const signature = generateSignature(name, entry.params, true);
+            config.actions[name] = {
+              signature,
+              description: entry.description,
+              params: entry.params,
+              rawSignature: `\`${signature}\``
+            };
+          }
+          console.log(`Loaded ${Object.keys(config.actions).length} actions from project config (JSON)`);
+        } catch (parseError) {
+          console.warn('Failed to parse actions.json:', parseError);
+        }
       } else {
-        console.warn('Could not load actions.ini:', actionsResult.error);
+        console.log('No actions.json found in project, will use defaults');
       }
-            
-      const rulesPath = `${configDir}/rules.ini`;
+
+      const rulesPath = `${projectPath}/rules.json`;
       const rulesResult = await window.electronAPI.readTextFile(rulesPath);
+      
       if (rulesResult.success && rulesResult.data) {
-        config.rules = parseIniContent(rulesResult.data);
-        console.log(`Loaded ${Object.keys(config.rules).length} rules from config`);
+        try {
+          const rulesJson: RulesJson = JSON.parse(rulesResult.data);
+          for (const [name, entry] of Object.entries(rulesJson)) {
+            const signature = generateSignature(name, entry.params, false);
+            config.rules[name] = {
+              signature,
+              description: entry.description,
+              params: entry.params,
+              rawSignature: `\`${signature}\``
+            };
+          }
+          console.log(`Loaded ${Object.keys(config.rules).length} rules from project config (JSON)`);
+        } catch (parseError) {
+          console.warn('Failed to parse rules.json:', parseError);
+        }
       } else {
-        console.warn('Could not load rules.ini:', rulesResult.error);
+        console.log('No rules.json found in project, will use defaults');
+      }
+      
+      if (Object.keys(config.actions).length === 0 || Object.keys(config.rules).length === 0) {
+        const globalConfig = await loadGlobalConfig();
+        if (Object.keys(config.actions).length === 0) {
+          config.actions = globalConfig.actions;
+        }
+        if (Object.keys(config.rules).length === 0) {
+          config.rules = globalConfig.rules;
+        }
       }
     } catch (error) {
-      console.error('Error loading config files:', error);
+      console.error('Error loading project config files:', error);
     }
     
-    configCache = config;
+    configCache.set(cacheKey, config);
     return config;
   })();
   
-  return configLoadPromise;
+  configLoadPromises.set(cacheKey, loadPromise);
+  return loadPromise;
+}
+
+/**
+ * Load default configuration from bundled app files
+ */
+async function loadGlobalConfig(): Promise<ConfigData> {
+  const config: ConfigData = {
+    actions: {},
+    rules: {}
+  };
+  
+  if (!window.electronAPI) {
+    console.warn('Electron API not available, using empty config');
+    return config;
+  }
+  
+  try {
+    const bundledConfigDir = await window.electronAPI.getBundledConfigDir();
+    const actionsJsonPath = `${bundledConfigDir}/actions.json`;
+    const actionsJsonResult = await window.electronAPI.readTextFile(actionsJsonPath);
+    
+    if (actionsJsonResult.success && actionsJsonResult.data) {
+      try {
+        const actionsJson: ActionsJson = JSON.parse(actionsJsonResult.data);
+        for (const [name, entry] of Object.entries(actionsJson)) {
+          const signature = generateSignature(name, entry.params, true);
+          config.actions[name] = {
+            signature,
+            description: entry.description,
+            params: entry.params,
+            rawSignature: `\`${signature}\``
+          };
+        }
+        console.log(`Loaded ${Object.keys(config.actions).length} actions from bundled config`);
+      } catch (parseError) {
+        console.warn('Failed to parse bundled actions.json:', parseError);
+      }
+    }
+
+    const rulesJsonPath = `${bundledConfigDir}/rules.json`;
+    const rulesJsonResult = await window.electronAPI.readTextFile(rulesJsonPath);
+    
+    if (rulesJsonResult.success && rulesJsonResult.data) {
+      try {
+        const rulesJson: RulesJson = JSON.parse(rulesJsonResult.data);
+        for (const [name, entry] of Object.entries(rulesJson)) {
+          const signature = generateSignature(name, entry.params, false);
+          config.rules[name] = {
+            signature,
+            description: entry.description,
+            params: entry.params,
+            rawSignature: `\`${signature}\``
+          };
+        }
+        console.log(`Loaded ${Object.keys(config.rules).length} rules from bundled config`);
+      } catch (parseError) {
+        console.warn('Failed to parse bundled rules.json:', parseError);
+      }
+    }
+  } catch (error) {
+    console.error('Error loading bundled config files:', error);
+  }
+  
+  return config;
+}
+
+/**
+ * Save actions configuration to a project
+ */
+export async function saveActionsConfig(projectPath: string, actions: Record<string, ActionOrRuleDoc>): Promise<void> {
+  if (!window.electronAPI) {
+    throw new Error('Electron API not available');
+  }
+  
+  const actionsJson: ActionsJson = {};
+  for (const [name, doc] of Object.entries(actions)) {
+    actionsJson[name] = {
+      description: doc.description,
+      params: doc.params
+    };
+  }
+  
+  const actionsPath = `${projectPath}/actions.json`;
+  const result = await window.electronAPI.writeTextFile(actionsPath, JSON.stringify(actionsJson, null, 2));
+  
+  if (!result.success) {
+    throw new Error(`Failed to save actions: ${result.error}`);
+  }
+
+  configCache.delete(projectPath);
+  configLoadPromises.delete(projectPath);
+}
+
+/**
+ * Save rules configuration to a project
+ */
+export async function saveRulesConfig(projectPath: string, rules: Record<string, ActionOrRuleDoc>): Promise<void> {
+  if (!window.electronAPI) {
+    throw new Error('Electron API not available');
+  }
+  
+  const rulesJson: RulesJson = {};
+  for (const [name, doc] of Object.entries(rules)) {
+    rulesJson[name] = {
+      description: doc.description,
+      params: doc.params
+    };
+  }
+  
+  const rulesPath = `${projectPath}/rules.json`;
+  const result = await window.electronAPI.writeTextFile(rulesPath, JSON.stringify(rulesJson, null, 2));
+  
+  if (!result.success) {
+    throw new Error(`Failed to save rules: ${result.error}`);
+  }
+
+  configCache.delete(projectPath);
+  configLoadPromises.delete(projectPath);
 }
 
 /**
@@ -193,24 +279,12 @@ export function getDocumentation(config: ConfigData, word: string): ActionOrRule
   return config.actions[word] || config.rules[word] || null;
 }
 
-/**
- * Get all action names
- */
-export function getActionNames(config: ConfigData): string[] {
-  return Object.keys(config.actions);
-}
-
-/**
- * Get all rule names
- */
-export function getRuleNames(config: ConfigData): string[] {
-  return Object.keys(config.rules);
-}
-
-/**
- * Clear the config cache (useful for reloading)
- */
-export function clearConfigCache(): void {
-  configCache = null;
-  configLoadPromise = null;
+export function clearConfigCache(projectPath?: string): void {
+  if (projectPath) {
+    configCache.delete(projectPath);
+    configLoadPromises.delete(projectPath);
+  } else {
+    configCache.clear();
+    configLoadPromises.clear();
+  }
 }

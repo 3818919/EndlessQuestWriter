@@ -2,6 +2,9 @@
  * Service for loading state templates from external .eqf files
  * State templates are partial quest files that define only state content
  * (description, actions, rules) without the full quest structure.
+ * 
+ * State templates are now stored in a universal templates directory (not per-project)
+ * at ~/.endless-quest-writer/templates/states/ (or ./templates/states/ in dev mode)
  */
 
 import { QuestAction, QuestRule, StateItem } from '../../eqf-parser';
@@ -22,8 +25,6 @@ let stateTemplatesLoadPromise: Promise<Record<string, StateTemplateData>> | null
  *   desc    "Description"
  *   action  ActionName(params);
  *   rule    RuleName(params) goto StateName
- * 
- * The items array preserves the original order of actions and rules as they appear in the file.
  */
 function parseStateTemplate(content: string): StateTemplateData {
   const lines = content.split('\n');
@@ -31,7 +32,7 @@ function parseStateTemplate(content: string): StateTemplateData {
     description: '',
     actions: [],
     rules: [],
-    items: [] // Preserves interleaved order
+    items: [] 
   };
 
   for (const line of lines) {
@@ -135,7 +136,7 @@ function parseParam(param: string): string | number {
 }
 
 /**
- * Load all state templates from the config/templates/states directory
+ * Load all state templates from the templates/states directory
  */
 export async function loadStateTemplates(): Promise<Record<string, StateTemplateData>> {  
   if (stateTemplatesCache) {
@@ -155,8 +156,8 @@ export async function loadStateTemplates(): Promise<Record<string, StateTemplate
     }
     
     try {
-      const configDir = await window.electronAPI.getConfigDir();
-      const statesDir = `${configDir}/templates/states`;
+      const templatesDir = await window.electronAPI.getTemplatesDir();
+      const statesDir = `${templatesDir}/states`;
             
       const dirExists = await window.electronAPI.fileExists(statesDir);
       if (!dirExists) {
@@ -182,8 +183,6 @@ export async function loadStateTemplates(): Promise<Record<string, StateTemplate
         if (result?.success && result.data) {
           try {            
             const stateTemplate = parseStateTemplate(result.data);
-            
-            // Use filename with .eqf extension as key for consistent delete/edit operations
             templates[filename] = stateTemplate;
             
             console.log(`Loaded state template: ${filename}`);
@@ -203,6 +202,17 @@ export async function loadStateTemplates(): Promise<Record<string, StateTemplate
   })();
   
   return stateTemplatesLoadPromise;
+}
+
+/**
+ * Get the state templates directory path
+ */
+export async function getStateTemplatesDir(): Promise<string> {
+  if (!window.electronAPI) {
+    throw new Error('Electron API not available');
+  }
+  const templatesDir = await window.electronAPI.getTemplatesDir();
+  return `${templatesDir}/states`;
 }
 
 /**

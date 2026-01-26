@@ -40,7 +40,6 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
   const loadTemplatesData = async () => {
     try {
       setLoading(true);
-      // Clear cache to ensure fresh data
       clearStateTemplatesCache();
       const loadedTemplates = await loadStateTemplates();
       setTemplates(loadedTemplates);
@@ -55,15 +54,10 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
   
   const handleOpenDialog = (templateFileName?: string) => {
     if (templateFileName && templates[templateFileName]) {
-      // Editing existing template - open state editor directly
       const template = templates[templateFileName];
       setEditingTemplate(templateFileName);
-      // Remove .eqf extension for display/editing
       const nameWithoutExt = templateFileName.replace(/\.eqf$/i, '');
       setTemplateName(nameWithoutExt);
-      
-      // Use the template's items array directly to preserve interleaved order
-      // The items array is populated by the parser in the order they appear in the file
       setCurrentState({
         name: nameWithoutExt,
         description: template.description,
@@ -73,7 +67,6 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
       });
       setStateEditorOpen(true);
     } else {
-      // Creating new template - prompt for name first
       setEditingTemplate(null);
       setTemplateName('');
       setDescription('');
@@ -84,7 +77,6 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
   };
   
   const handleOpenStateEditor = () => {
-    // Called after user enters template name in dialog
     setDialogOpen(false);
     setCurrentState({
       name: templateName || 'NewTemplate',
@@ -110,8 +102,6 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
   };
   
   const handleSaveStateEditor = async (updates: Partial<QuestState>, nameChanged: boolean, oldName: string) => {
-    // Use the state name as template name if we're creating new
-    // For editing, use the name from the state editor (updates.name) or fall back to templateName
     const finalTemplateName = templateName || updates.name || 'NewTemplate';
     
     if (!finalTemplateName.trim()) {
@@ -120,8 +110,8 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
     }
     
     try {
-      const configDir = await window.electronAPI.getConfigDir();
-      const statesDir = `${configDir}/templates/states`;
+      const templatesDir = await window.electronAPI.getTemplatesDir();
+      const statesDir = `${templatesDir}/states`;
       const templateFileName = `${finalTemplateName}.eqf`;
       const templatePath = `${statesDir}/${templateFileName}`;
       
@@ -137,7 +127,6 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
           }
         });
       } else {
-        // Fallback to separate arrays
         (updates.actions || []).forEach(action => {
           content += `action ${action.rawText}\n`;
         });
@@ -148,8 +137,7 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
       
       await window.electronAPI.ensureDir(statesDir);
       await window.electronAPI.writeTextFile(templatePath, content.trim());
-      
-      // Clear cache and reload
+
       clearStateTemplatesCache();
       await loadTemplatesData();
       
@@ -189,9 +177,8 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
     }
     
     try {
-      
-      const configDir = await window.electronAPI.getConfigDir();
-      const statesDir = `${configDir}/templates/states`;
+      const templatesDir = await window.electronAPI.getTemplatesDir();
+      const statesDir = `${templatesDir}/states`;
       const templateFileName = `${templateName}.eqf`;
       const templatePath = `${statesDir}/${templateFileName}`;
       const content = generateStateTemplateContent();
@@ -215,13 +202,12 @@ const StateTemplatesPage: React.FC<StateTemplatesPageProps> = ({ theme }) => {
     }
     
     try {
-      const configDir = await window.electronAPI.getConfigDir();
-      const statesDir = `${configDir}/templates/states`;
+      const templatesDir = await window.electronAPI.getTemplatesDir();
+      const statesDir = `${templatesDir}/states`;
       const templatePath = `${statesDir}/${templateFileName}`;
       
       await window.electronAPI.deleteFile(templatePath);
       
-      // Clear cache and reload
       clearStateTemplatesCache();
       await loadTemplatesData();
       

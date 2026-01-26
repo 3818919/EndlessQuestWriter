@@ -11,7 +11,7 @@ let templatesCache: Record<string, TemplateData> | null = null;
 let templatesLoadPromise: Promise<Record<string, TemplateData>> | null = null;
 
 /**
- * Load all templates from the config/templates directory
+ * Load all templates from the templates directory
  */
 export async function loadTemplates(): Promise<Record<string, TemplateData>> {  
   if (templatesCache) {
@@ -31,8 +31,7 @@ export async function loadTemplates(): Promise<Record<string, TemplateData>> {
     }
     
     try {
-      const configDir = await window.electronAPI.getConfigDir();
-      const templatesDir = `${configDir}/templates`;
+      const templatesDir = await window.electronAPI.getTemplatesDir();
             
       const dirExists = await window.electronAPI.fileExists(templatesDir);
       if (!dirExists) {
@@ -58,8 +57,6 @@ export async function loadTemplates(): Promise<Record<string, TemplateData>> {
         if (result?.success && result.data) {
           try {            
             const quest = EQFParser.parse(result.data, 0);
-            
-            // Use filename as key (with .eqf extension) for consistent delete/edit operations
             const { id, ...templateData } = quest;
             templates[filename] = templateData;
             
@@ -80,6 +77,16 @@ export async function loadTemplates(): Promise<Record<string, TemplateData>> {
   })();
   
   return templatesLoadPromise;
+}
+
+/**
+ * Get the templates directory path
+ */
+export async function getTemplatesDir(): Promise<string> {
+  if (!window.electronAPI) {
+    throw new Error('Electron API not available');
+  }
+  return window.electronAPI.getTemplatesDir();
 }
 
 /**

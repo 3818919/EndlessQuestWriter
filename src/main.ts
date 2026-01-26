@@ -648,7 +648,6 @@ ipcMain.handle('file:readTextBatch', async (event, filePaths) => {
   return results;
 });
 
-
 ipcMain.handle('file:deleteFile', async (event, filePath) => {
   try {
     await fs.unlink(filePath);
@@ -658,142 +657,347 @@ ipcMain.handle('file:deleteFile', async (event, filePath) => {
   }
 });
 
-
-ipcMain.handle('path:getConfigDir', async () => {
-  const isDev = process.argv.includes('--dev');
-  if (isDev) {
-    
-    return path.join(process.cwd(), 'config');
-  } else {
-    
-    const homeDir = app.getPath('home');
-    const userConfigDir = path.join(homeDir, '.endless-quest-writer', 'config');
-    return userConfigDir;
-  }
+ipcMain.handle('path:getTemplatesDir', async () => {
+  const homeDir = app.getPath('home');
+  const templatesDir = path.join(homeDir, '.endless-quest-writer', 'templates');
+  return templatesDir;
 });
 
+ipcMain.handle('path:getAppDataDir', async () => {
+  const homeDir = app.getPath('home');
+  return path.join(homeDir, '.endless-quest-writer');
+});
 
 ipcMain.handle('path:getBundledConfigDir', async () => {
   const isDev = process.argv.includes('--dev');
   if (isDev) {
     return path.join(process.cwd(), 'config');
   } else {
-    
     return path.join((process as any).resourcesPath || path.dirname(app.getPath('exe')), 'config');
   }
 });
 
+ipcMain.handle('path:getBundledTemplatesDir', async () => {
+  const isDev = process.argv.includes('--dev');
+  if (isDev) {
+    return path.join(process.cwd(), 'templates');
+  } else {
+    return path.join((process as any).resourcesPath || path.dirname(app.getPath('exe')), 'templates');
+  }
+});
+
+async function convertIniToJson(iniPath: string, jsonPath: string, isAction = true) {
+  try {
+    const content = await fs.readFile(iniPath, 'utf-8');
+    const lines = content.split('\n');
+    const result: Record<string, { description: string; params: Array<{ name: string; type: string }> }> = {};
+    
+    let currentSection: string | null = null;
+    let currentData: { signature?: string; description?: string } = {};
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith(';')) continue;
+      
+      const sectionMatch = trimmed.match(/^\[([^\]]+)\]$/);
+      if (sectionMatch) {
+        if (currentSection && currentData.signature && currentData.description) {
+          const paramMatch = currentData.signature.match(/\(([^)]*)\)/);
+          const params = [];
+          if (paramMatch && paramMatch[1].trim()) {
+            let current = '';
+            let inQuotes = false;
+            const paramsStr = paramMatch[1];
+            
+            for (let i = 0; i < paramsStr.length; i++) {
+              const char = paramsStr[i];
+              if (char === '"') {
+                inQuotes = !inQuotes;
+                current += char;
+              } else if (char === ',' && !inQuotes) {
+                const param = current.trim().replace(/`/g, '');
+                if (param) {
+                  if (param.startsWith('"') && param.endsWith('"')) {
+                    params.push({ name: param.slice(1, -1), type: 'string' });
+                  } else {
+                    params.push({ name: param, type: 'integer' });
+                  }
+                }
+                current = '';
+              } else {
+                current += char;
+              }
+            }
+            const lastParam = current.trim().replace(/`/g, '');
+            if (lastParam) {
+              if (lastParam.startsWith('"') && lastParam.endsWith('"')) {
+                params.push({ name: lastParam.slice(1, -1), type: 'string' });
+              } else {
+                params.push({ name: lastParam, type: 'integer' });
+              }
+            }
+          }
+          
+          result[currentSection] = {
+            description: currentData.description,
+            params: params
+          };
+        }
+        currentSection = sectionMatch[1];
+        currentData = {};
+        continue;
+      }
+      
+      const keyValueMatch = trimmed.match(/^(\w+)\s*=\s*(.+)$/);
+      if (keyValueMatch && currentSection) {
+        const [, key, value] = keyValueMatch;
+        if (key === 'signature') {
+          currentData.signature = value;
+        } else if (key === 'description') {
+          currentData.description = value;
+        }
+      }
+    }
+    
+    if (currentSection && currentData.signature && currentData.description) {
+      const paramMatch = currentData.signature.match(/\(([^)]*)\)/);
+      const params = [];
+      if (paramMatch && paramMatch[1].trim()) {
+        let current = '';
+        let inQuotes = false;
+        const paramsStr = paramMatch[1];
+        
+        for (let i = 0; i < paramsStr.length; i++) {
+          const char = paramsStr[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+            current += char;
+          } else if (char === ',' && !inQuotes) {
+            const param = current.trim().replace(/`/g, '');
+            if (param) {
+              if (param.startsWith('"') && param.endsWith('"')) {
+                params.push({ name: param.slice(1, -1), type: 'string' });
+              } else {
+                params.push({ name: param, type: 'integer' });
+              }
+            }
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        const lastParam = current.trim().replace(/`/g, '');
+        if (lastParam) {
+          if (lastParam.startsWith('"') && lastParam.endsWith('"')) {
+            params.push({ name: lastParam.slice(1, -1), type: 'string' });
+          } else {
+            params.push({ name: lastParam, type: 'integer' });
+          }
+        }
+      }
+      
+      result[currentSection] = {
+        description: currentData.description,
+        params: params
+      };
+    }
+    
+    await fs.writeFile(jsonPath, JSON.stringify(result, null, 2), 'utf-8');
+    console.log(`Converted ${iniPath} to ${jsonPath}`);
+    return true;
+  } catch (e) {
+    console.log(`Could not convert ${iniPath} to JSON:`, e.message);
+    return false;
+  }
+}
+
+async function copyDirectory(src: string, dest: string) {
+  await fs.mkdir(dest, { recursive: true });
+  const entries = await fs.readdir(src, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    
+    if (entry.isDirectory()) {
+      await copyDirectory(srcPath, destPath);
+    } else {
+      try {
+        await fs.access(destPath);
+      } catch {
+        const content = await fs.readFile(srcPath);
+        await fs.writeFile(destPath, content);
+        console.log(`Copied: ${entry.name}`);
+      }
+    }
+  }
+}
 
 ipcMain.handle('config:initialize', async () => {
   const isDev = process.argv.includes('--dev');
-  if (isDev) {
-    
-    return { success: true, configDir: path.join(process.cwd(), 'config') };
-  }
   
   const homeDir = app.getPath('home');
-  const userConfigDir = path.join(homeDir, '.endless-quest-writer', 'config');
-  const bundledConfigDir = path.join((process as any).resourcesPath || path.dirname(app.getPath('exe')), 'config');
+  const appDataDir = path.join(homeDir, '.endless-quest-writer');
+  const userTemplatesDir = path.join(appDataDir, 'templates');
+  const bundledTemplatesDir = isDev
+    ? path.join(process.cwd(), 'templates')
+    : path.join((process as any).resourcesPath || path.dirname(app.getPath('exe')), 'templates');
   
   try {
-    
-    await fs.mkdir(userConfigDir, { recursive: true });
-    
-    
-    const actionsPath = path.join(userConfigDir, 'actions.ini');
+    await fs.mkdir(appDataDir, { recursive: true });
+    await fs.mkdir(userTemplatesDir, { recursive: true });
+    await fs.mkdir(path.join(userTemplatesDir, 'states'), { recursive: true });
+
+    const oldConfigDir = path.join(appDataDir, 'config');
     try {
-      await fs.access(actionsPath);
-    } catch {
-      const bundledActionsPath = path.join(bundledConfigDir, 'actions.ini');
+      await fs.access(oldConfigDir);
+      console.log('Found old config directory, migrating...');
+
+      const actionsIniPath = path.join(oldConfigDir, 'actions.ini');
+      const actionsJsonPath = path.join(oldConfigDir, 'actions.json');
+      let hasCustomActions = false;
       try {
-        const content = await fs.readFile(bundledActionsPath, 'utf-8');
-        await fs.writeFile(actionsPath, content, 'utf-8');
+        await fs.access(actionsIniPath);
+        hasCustomActions = true;
+        try {
+          await fs.access(actionsJsonPath);
+        } catch {
+          await convertIniToJson(actionsIniPath, actionsJsonPath, true);
+          console.log('Converted actions.ini to actions.json');
+        }
       } catch (e) {
-        console.log('Could not copy bundled actions.ini:', e.message);
+        try {
+          await fs.access(actionsJsonPath);
+          hasCustomActions = true;
+        } catch {
+        }
       }
-    }
-    
-    
-    const rulesPath = path.join(userConfigDir, 'rules.ini');
-    try {
-      await fs.access(rulesPath);
-    } catch {
-      const bundledRulesPath = path.join(bundledConfigDir, 'rules.ini');
+      
+      const rulesIniPath = path.join(oldConfigDir, 'rules.ini');
+      const rulesJsonPath = path.join(oldConfigDir, 'rules.json');
+      let hasCustomRules = false;
       try {
-        const content = await fs.readFile(bundledRulesPath, 'utf-8');
-        await fs.writeFile(rulesPath, content, 'utf-8');
+        await fs.access(rulesIniPath);
+        hasCustomRules = true;
+        try {
+          await fs.access(rulesJsonPath);
+        } catch {
+          await convertIniToJson(rulesIniPath, rulesJsonPath, false);
+          console.log('Converted rules.ini to rules.json');
+        }
       } catch (e) {
-        console.log('Could not copy bundled rules.ini:', e.message);
+        try {
+          await fs.access(rulesJsonPath);
+          hasCustomRules = true;
+        } catch {
+
+        }
       }
-    }
-    
-    
-    const templatesDir = path.join(userConfigDir, 'templates');
-    await fs.mkdir(templatesDir, { recursive: true });
-    
-    
-    const bundledTemplatesDir = path.join(bundledConfigDir, 'templates');
-    try {
-      const files = await fs.readdir(bundledTemplatesDir);
-      for (const file of files) {
-        if (file.endsWith('.eqf')) {
-          const userTemplatePath = path.join(templatesDir, file);
-          const bundledTemplatePath = path.join(bundledTemplatesDir, file);
-          
-          try {
-            
-            await fs.access(userTemplatePath);
-          } catch {
-            
+
+      if (hasCustomActions || hasCustomRules) {
+        const entries = await fs.readdir(appDataDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isDirectory() && entry.name !== 'config' && entry.name !== 'templates') {
+            const projectDir = path.join(appDataDir, entry.name);
+            const projectConfigPath = path.join(projectDir, 'config.json');
             try {
-              const content = await fs.readFile(bundledTemplatePath, 'utf-8');
-              await fs.writeFile(userTemplatePath, content, 'utf-8');
-              console.log(`Copied template: ${file}`);
+              await fs.access(projectConfigPath);
+              if (hasCustomActions) {
+                const projectActionsPath = path.join(projectDir, 'actions.json');
+                try {
+                  await fs.access(projectActionsPath);
+                } catch {
+                  try {
+                    const content = await fs.readFile(actionsJsonPath, 'utf-8');
+                    await fs.writeFile(projectActionsPath, content, 'utf-8');
+                    console.log(`Migrated custom actions.json to project: ${entry.name}`);
+                  } catch (e) {
+                    console.log(`Could not migrate actions.json to project ${entry.name}`);
+                  }
+                }
+              }
+              
+              if (hasCustomRules) {
+                const projectRulesPath = path.join(projectDir, 'rules.json');
+                try {
+                  await fs.access(projectRulesPath);
+                } catch {
+                  try {
+                    const content = await fs.readFile(rulesJsonPath, 'utf-8');
+                    await fs.writeFile(projectRulesPath, content, 'utf-8');
+                    console.log(`Migrated custom rules.json to project: ${entry.name}`);
+                  } catch (e) {
+                    console.log(`Could not migrate rules.json to project ${entry.name}`);
+                  }
+                }
+              }
             } catch (e) {
-              console.log(`Could not copy template ${file}:`, e.message);
+
             }
           }
         }
       }
-    } catch (e) {
-      console.log('Could not access bundled templates directory:', e.message);
-    }
-    
-    
-    const statesDir = path.join(userConfigDir, 'templates', 'states');
-    await fs.mkdir(statesDir, { recursive: true });
-    
-    
-    const bundledStatesDir = path.join(bundledConfigDir, 'templates', 'states');
-    try {
-      const files = await fs.readdir(bundledStatesDir);
-      for (const file of files) {
-        if (file.endsWith('.eqf')) {
-          const userStatePath = path.join(statesDir, file);
-          const bundledStatePath = path.join(bundledStatesDir, file);
+      
+      const oldTemplatesInConfig = path.join(oldConfigDir, 'templates');
+      try {
+        await fs.access(oldTemplatesInConfig);
+        const files = await fs.readdir(oldTemplatesInConfig);
+        for (const file of files) {
+          const oldPath = path.join(oldTemplatesInConfig, file);
+          const stats = await fs.stat(oldPath);
           
-          try {
-            
-            await fs.access(userStatePath);
-          } catch {
-            
+          if (stats.isFile() && file.endsWith('.eqf')) {
+            const newPath = path.join(userTemplatesDir, file);
             try {
-              const content = await fs.readFile(bundledStatePath, 'utf-8');
-              await fs.writeFile(userStatePath, content, 'utf-8');
-              console.log(`Copied state template: ${file}`);
-            } catch (e) {
-              console.log(`Could not copy state template ${file}:`, e.message);
+              await fs.access(newPath);
+            } catch {
+              const content = await fs.readFile(oldPath, 'utf-8');
+              await fs.writeFile(newPath, content, 'utf-8');
+              console.log(`Migrated template: ${file}`);
+            }
+          } else if (stats.isDirectory() && file === 'states') {
+            const stateFiles = await fs.readdir(oldPath);
+            for (const stateFile of stateFiles) {
+              if (stateFile.endsWith('.eqf')) {
+                const oldStatePath = path.join(oldPath, stateFile);
+                const newStatePath = path.join(userTemplatesDir, 'states', stateFile);
+                try {
+                  await fs.access(newStatePath);
+                } catch {
+                  const content = await fs.readFile(oldStatePath, 'utf-8');
+                  await fs.writeFile(newStatePath, content, 'utf-8');
+                  console.log(`Migrated state template: ${stateFile}`);
+                }
+              }
             }
           }
         }
+      } catch (e) {
+
       }
+
+      await fs.rm(oldConfigDir, { recursive: true, force: true });
+      console.log('Migration complete - removed old config directory');
     } catch (e) {
-      console.log('Could not access bundled states templates directory:', e.message);
+
+    }
+
+    try {
+      await copyDirectory(bundledTemplatesDir, userTemplatesDir);
+    } catch (e) {
+      console.log('Could not copy bundled templates:', e.message);
     }
     
-    return { success: true, configDir: userConfigDir };
+    return { 
+      success: true, 
+      templatesDir: userTemplatesDir
+    };
   } catch (error) {
-    return { success: false, error: error.message, configDir: userConfigDir };
+    return { 
+      success: false, 
+      error: error.message, 
+      templatesDir: userTemplatesDir
+    };
   }
 });
 

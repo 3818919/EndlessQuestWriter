@@ -1,0 +1,171 @@
+{
+  "AddNpcText": {
+    "description": "Displays dialog text from an NPC in the quest dialog window.",
+    "params": [
+      { "name": "npcQuestId", "type": "integer" },
+      { "name": "message", "type": "string" }
+    ]
+  },
+  "AddNpcInput": {
+    "description": "Adds a clickable link option in the dialog window. Use with InputNpc() rule.",
+    "params": [
+      { "name": "npcQuestId", "type": "integer" },
+      { "name": "inputId", "type": "integer" },
+      { "name": "message", "type": "string" }
+    ]
+  },
+  "AddNpcChat": {
+    "description": "Displays an NPC chat balloon (random chance) during the quest state.",
+    "params": [
+      { "name": "npcQuestId", "type": "integer" },
+      { "name": "message", "type": "string" }
+    ]
+  },
+  "AddNpcPM": {
+    "description": "Displays a private message in the dialog window with a custom name.",
+    "params": [
+      { "name": "npcQuestId", "type": "integer" },
+      { "name": "message", "type": "string" }
+    ]
+  },
+  "Roll": {
+    "description": "Performs a random roll of x.",
+    "params": [
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "GiveItem": {
+    "description": "Rewards the player with an item added to their inventory.",
+    "params": [
+      { "name": "itemId", "type": "integer" },
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "RemoveItem": {
+    "description": "Removes an item from the player's inventory.",
+    "params": [
+      { "name": "itemId", "type": "integer" },
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "GiveExp": {
+    "description": "Rewards the player with experience points.",
+    "params": [
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "ShowHint": {
+    "description": "Displays a hint message in the client's information bar.",
+    "params": [
+      { "name": "message", "type": "string" }
+    ]
+  },
+  "PlaySound": {
+    "description": "Plays a sound effect for the player.",
+    "params": [
+      { "name": "soundId", "type": "integer" }
+    ]
+  },
+  "SetCoord": {
+    "description": "Teleports the player to the specified map coordinates.",
+    "params": [
+      { "name": "mapId", "type": "integer" },
+      { "name": "x", "type": "integer" },
+      { "name": "y", "type": "integer" }
+    ]
+  },
+  "Quake": {
+    "description": "Creates an earthquake effect on the specified map or the player's current map.",
+    "params": [
+      { "name": "magnitude", "type": "integer" }
+    ]
+  },
+  "QuakeWorld": {
+    "description": "Creates an earthquake effect for all player's server wide.",
+    "params": [
+      { "name": "magnitude", "type": "integer" }
+    ]
+  },
+  "SetClass": {
+    "description": "Changes the player's class to the specified class ID.",
+    "params": [
+      { "name": "classId", "type": "integer" }
+    ]
+  },
+  "SetRace": {
+    "description": "Changes the player's race to the specified race ID.",
+    "params": [
+      { "name": "raceId", "type": "integer" }
+    ]
+  },
+  "SetHome": {
+    "description": "Sets the player's home town.",
+    "params": [
+      { "name": "home", "type": "integer" }
+    ]
+  },
+  "SetTitle": {
+    "description": "Sets the player's title.",
+    "params": [
+      { "name": "title", "type": "integer" }
+    ]
+  },
+  "GiveKarma": {
+    "description": "Awards karma points to the player.",
+    "params": [
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "RemoveKarma": {
+    "description": "Removes karma points from the player.",
+    "params": [
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "StartQuest": {
+    "description": "Starts another quest if not already active.",
+    "params": [
+      { "name": "questId", "type": "integer" },
+      { "name": "quest state", "type": "string" }
+    ]
+  },
+  "SetQuestState": {
+    "description": "Sets the quest state of an active quest.",
+    "params": [
+      { "name": "questId", "type": "integer" },
+      { "name": "quest state", "type": "string" }
+    ]
+  },
+  "ResetQuest": {
+    "description": "Resets an active quest.",
+    "params": [
+      { "name": "questId", "type": "integer" }
+    ]
+  },
+  "GiveStat": {
+    "description": "Gives a stat to the player: STR, CON, level, admin, karma, class, gender, etc..",
+    "params": [
+      { "name": "stat", "type": "string" },
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "RemoveStat": {
+    "description": "Removes a stat from a player: STR, CON, level, admin, karma, class, gender, etc..",
+    "params": [
+      { "name": "stat", "type": "string" },
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "ResetDaily": {
+    "description": "Resets a quest for the day.",
+    "params": []
+  },
+  "Reset": {
+    "description": "Resets the quest back to the Begin state, allowing it to be repeated.",
+    "params": []
+  },
+  "End": {
+    "description": "Ends the quest permanently. The quest will display in the player's quest history as completed.",
+    "params": []
+  }
+}

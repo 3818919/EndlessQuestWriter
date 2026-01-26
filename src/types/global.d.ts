@@ -16,10 +16,12 @@ interface ElectronAPI {
   joinPath: (...paths: string[]) => Promise<string>;
   getHomeDir: () => Promise<string>;
   getCwd: () => Promise<string>;
-  getConfigDir: () => Promise<string>;
+  getTemplatesDir: () => Promise<string>;
+  getAppDataDir: () => Promise<string>;
   getBundledConfigDir: () => Promise<string>;
+  getBundledTemplatesDir: () => Promise<string>;
   
-  initializeConfig: () => Promise<{ success: boolean; configDir: string; error?: string }>;
+  initializeConfig: () => Promise<{ success: boolean; templatesDir?: string; error?: string }>;
   
   setTitle: (title: string) => Promise<void>;
   

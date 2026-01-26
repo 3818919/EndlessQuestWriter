@@ -1,0 +1,58 @@
+quest "New Fetch Quest"
+version 1
+
+State Begin
+{
+    desc "Talk to NPC"
+    action AddNpcText(QUEST_ID, "Greetings! I need your help with a task.");
+    action AddNpcText(QUEST_ID, "Can you fetch me some items? I need 5 of item #100.");
+    action AddNpcInput(QUEST_ID, 1, "Sure, I can help!");
+    action AddNpcInput(QUEST_ID, 2, "No, sorry.");
+    rule InputNpc(1) goto CollectItems
+    rule InputNpc(2) goto Restart
+}
+
+State CollectItems
+{
+    desc "Collect 5 of Item #100"
+    action AddNpcText(QUEST_ID, "Go collect the items and return to me when you have them.");
+    rule GotItems(100, 5) goto ReturnToNPC
+}
+
+State ReturnToNPC
+{
+    desc "Return to NPC"
+    action AddNpcText(QUEST_ID, "You're back, do you have my items?");
+    action AddNpcInput(QUEST_ID, 1, "Give Items");
+    rule InputNpc(1) goto CheckItems
+}
+
+State CheckItems
+{
+    desc "Talk to NPC"
+    action AddNpcText(QUEST_ID, "I thought you had my items?");
+    rule GotItems(100,5) goto TakeItems
+    rule TalkedToNpc(QUEST_ID) goto CollectItems
+}
+
+State TakeItems
+{
+    desc "Talk to NPC"
+    action RemoveItem(100,5);
+    action AddNpcText(QUEST_ID, "Ah thank you! My items! Here is a reward for the trouble.");
+    rule TalkedToNpc(QUEST_ID) goto Reward
+}
+
+State Reward
+{
+    desc ""
+    action GiveExp(1000);
+    action GiveItem(QUEST_ID, 500);
+    action End();
+}
+
+State Restart
+{
+    desc ""
+    action Reset();
+}

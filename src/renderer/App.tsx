@@ -3,13 +3,12 @@ import LandingScreen from './pages/LandingScreen';
 import EditorPage from './pages/EditorPage';
 import { useProject } from './hooks/useProject';
 import { QuestData, EQFParser } from '../eqf-parser';
-import UpdateNotification from './components/UpdateNotification';
+
 const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
 
 const App: React.FC = () => {
   const [questData, setQuestData] = useState<Record<number, QuestData>>({});
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  const [configInitialized, setConfigInitialized] = useState(false);
   
   useEffect(() => {
     const initConfig = async () => {
@@ -17,7 +16,7 @@ const App: React.FC = () => {
         try {
           const result = await window.electronAPI.initializeConfig();
           if (result.success) {
-            console.log('Config initialized at:', result.configDir);
+            console.log('Config initialized, templates at:', result.templatesDir);
           } else {
             console.warn('Config initialization warning:', result.error);
           }
@@ -25,7 +24,6 @@ const App: React.FC = () => {
           console.error('Failed to initialize config:', error);
         }
       }
-      setConfigInitialized(true);
     };
     initConfig();
   }, []);
@@ -50,6 +48,7 @@ const App: React.FC = () => {
     currentProject,
     projectName,
     serverPath,
+    questsPathType,
     linkProject,
     selectProject: selectProjectHook,
     deleteProject: deleteProjectHook,
@@ -61,9 +60,14 @@ const App: React.FC = () => {
     deleteQuest: deleteQuestHook,
     importQuest: importQuestHook,
     exportQuest: exportQuestHook,
-    duplicateQuest: duplicateQuestHook,
-    loadAllQuests
+    duplicateQuest: duplicateQuestHook
   } = useProject();
+
+  // Helper to get the correct quests directory path
+  const getQuestsDir = useCallback(() => {
+    if (!serverPath) return '';
+    return questsPathType === 'quests-direct' ? serverPath : `${serverPath}/data/quests`;
+  }, [serverPath, questsPathType]);
 
   const selectProject = async (projectName: string) => {
     try {
@@ -81,7 +85,7 @@ const App: React.FC = () => {
     const newQuestId = await createQuestHook(questData, templateName);
       
     if (serverPath && window.electronAPI) {
-      const questsDir = `${serverPath}/data/quests`;
+      const questsDir = getQuestsDir();
       const questFileName = String(newQuestId).padStart(5, '0') + '.eqf';
       const questPath = `${questsDir}/${questFileName}`;
       
@@ -120,7 +124,7 @@ const App: React.FC = () => {
     const questId = await importQuestHook(eqfPath);
       
     if (serverPath && window.electronAPI) {
-      const questsDir = `${serverPath}/data/quests`;
+      const questsDir = getQuestsDir();
       const questFileName = String(questId).padStart(5, '0') + '.eqf';
       const questPath = `${questsDir}/${questFileName}`;
       
@@ -142,7 +146,7 @@ const App: React.FC = () => {
     const newQuestId = await duplicateQuestHook(questId);
       
     if (serverPath && window.electronAPI) {
-      const questsDir = `${serverPath}/data/quests`;
+      const questsDir = getQuestsDir();
       const questFileName = String(newQuestId).padStart(5, '0') + '.eqf';
       const questPath = `${questsDir}/${questFileName}`;
       

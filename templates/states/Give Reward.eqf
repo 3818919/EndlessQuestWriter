@@ -1,0 +1,6 @@
+	desc	"Receive Reward"
+
+	action	GiveExp(1000);
+	action	GiveItem(1, 100);
+	action	ShowHint("Quest Complete!");
+	action	End();

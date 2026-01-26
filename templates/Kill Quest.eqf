@@ -1,0 +1,45 @@
+Main
+{
+	questname	"New Kill Quest"
+	version		1
+}
+
+state Begin
+{
+	desc	"Talk to NPC"
+
+	action	AddNpcText(1, "The monsters are getting out of control!");
+	action	AddNpcText(1, "Can you help me by killing 10 of NPC #2?");
+	action	AddNpcInput(1, 1, "I will do it!");
+	action	AddNpcInput(1, 2, "Not interested.");
+
+	rule	InputNpc(1) goto KillMonsters
+	rule	InputNpc(2) goto Begin
+}
+
+state KillMonsters
+{
+	desc	"Kill 10 of NPC #2"
+
+	action	AddNpcText(1, "Go kill the monsters and report back to me when you are done.");
+	rule	KilledNpcs(2, 10) goto ReturnToNPC
+}
+
+state ReturnToNPC
+{
+	desc	"Return to NPC for reward"
+
+	action	ShowHint("You have killed 10 X_NPC. Return to NPC.");
+	action	PlaySound(5);
+	
+	action	AddNpcText(1, "Well done! You have done a great service. Here is your reward.");
+	rule	TalkedToNpc(1) goto Reward
+}
+
+state Reward
+{
+	desc	""
+	action	GiveExp(2000);
+	action	GiveItem(1, 1000);
+	action	End();
+}

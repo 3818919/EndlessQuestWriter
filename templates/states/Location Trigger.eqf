@@ -1,0 +1,5 @@
+	desc	"Go to location"
+
+	action	ShowHint("Travel to the marked location.");
+
+	rule	EnterCoord(1, 10, 10) goto ArrivedAtLocation

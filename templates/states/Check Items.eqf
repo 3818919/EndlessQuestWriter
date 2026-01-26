@@ -1,0 +1,4 @@
+desc "Talk to NPC"
+rule GotItems(100,5) goto TakeItems
+action AddNpcText(QUEST_ID, "I thought you had my items?");
+rule TalkedToNpc(QUEST_ID) goto CollectItems

@@ -16,8 +16,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   joinPath: (...paths) => ipcRenderer.invoke('path:join', ...paths),
   getHomeDir: () => ipcRenderer.invoke('path:getHomeDir'),
   getCwd: () => ipcRenderer.invoke('path:getCwd'),
-  getConfigDir: () => ipcRenderer.invoke('path:getConfigDir'),
+  getTemplatesDir: () => ipcRenderer.invoke('path:getTemplatesDir'),
+  getAppDataDir: () => ipcRenderer.invoke('path:getAppDataDir'),
   getBundledConfigDir: () => ipcRenderer.invoke('path:getBundledConfigDir'),
+  getBundledTemplatesDir: () => ipcRenderer.invoke('path:getBundledTemplatesDir'),
   
   initializeConfig: () => ipcRenderer.invoke('config:initialize'),
   

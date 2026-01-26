@@ -17,11 +17,10 @@ interface StateNodeEditorProps {
   onClose: () => void;
   onSave: (updates: Partial<QuestState>, nameChanged: boolean, oldName: string) => void;
   onCreateState?: (stateName: string) => void;
-  isTemplateMode?: boolean; // When true, we're editing a state template (not inside a quest)
-  onSaveAsTemplate?: (state: QuestState) => void; // Callback to save current state as template
+  isTemplateMode?: boolean; 
+  onSaveAsTemplate?: (state: QuestState) => void; 
 }
 
-// Default action/rule types if config not loaded (matches config/actions.ini and config/rules.ini)
 const DEFAULT_ACTION_TYPES = [
   'AddNpcText', 'AddNpcInput', 'AddNpcChat', 'AddNpcPM', 'Roll', 'GiveItem', 'RemoveItem',
   'GiveExp', 'ShowHint', 'PlaySound', 'SetCoord', 'Quake', 'QuakeWorld', 'SetClass',
@@ -37,7 +36,6 @@ const DEFAULT_RULE_TYPES = [
   'StatRpn', 'DoneDaily', 'Always'
 ];
 
-// Parameter configuration for actions (fallback - matches config/actions.ini)
 const DEFAULT_ACTION_PARAMS: Record<string, string[]> = {
   AddNpcText: ['npcQuestId', 'message'],
   AddNpcInput: ['npcQuestId', 'inputId', 'message'],
@@ -68,7 +66,6 @@ const DEFAULT_ACTION_PARAMS: Record<string, string[]> = {
   End: []
 };
 
-// Parameter configuration for rules (fallback - matches config/rules.ini)
 const DEFAULT_RULE_PARAMS: Record<string, string[]> = {
   TalkedToNpc: ['npcQuestId'],
   InputNpc: ['inputId'],
@@ -100,20 +97,16 @@ const DEFAULT_RULE_PARAMS: Record<string, string[]> = {
   Always: []
 };
 
-// Check if signature includes a semicolon at the end (for actions)
 function signatureHasSemicolon(signature: string): boolean {
-  // Remove backticks and check for semicolon
   const clean = signature.replace(/`/g, '').trim();
   return clean.endsWith(';');
 }
 
 export default function StateNodeEditor({ state, stateIndex, originalStateName, allStates, onClose, onSave, onCreateState, isTemplateMode = false, onSaveAsTemplate }: StateNodeEditorProps) {
-  // Build items list from state - use existing items if present, otherwise build from actions/rules
   const buildItemsList = (s: QuestState): StateItem[] => {
     if (s.items && s.items.length > 0) {
       return [...s.items];
     }
-    // Fallback: build from separate arrays (actions first, then rules)
     const items: StateItem[] = [];
     s.actions.forEach(action => items.push({ kind: 'action', data: action }));
     s.rules.forEach(rule => items.push({ kind: 'rule', data: rule }));
@@ -127,8 +120,7 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
     rules: [...state.rules],
     items: buildItemsList(state)
   });
-  
-  // Items list for display and reordering
+
   const [unifiedItems, setUnifiedItems] = useState<StateItem[]>(() => 
     buildItemsList(state)
   );
@@ -140,19 +132,14 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
   const [ruleParams, setRuleParams] = useState<Record<string, ParamInfo[]>>({});
   const [actionHasSemicolon, setActionHasSemicolon] = useState<Record<string, boolean>>({});
   const [stateTemplates, setStateTemplates] = useState<Record<string, StateTemplateData>>({});
-  
-  // Save as template dialog state
   const [saveTemplateDialog, setSaveTemplateDialog] = useState<{ open: boolean; templateName: string }>({
     open: false,
     templateName: ''
   });
   
-  // Drag and drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const dragNodeRef = useRef<HTMLDivElement | null>(null);
-
-  // Sync unified list back to editedState - preserves order in items array
   const syncUnifiedToState = (items: StateItem[]) => {
     const newActions: QuestAction[] = [];
     const newRules: QuestRule[] = [];
@@ -169,16 +156,14 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
       ...prev,
       actions: newActions,
       rules: newRules,
-      items: [...items] // Preserve the interleaved order
+      items: [...items] 
     }));
   };
 
-  // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', index.toString());
-    // Add a slight delay to allow the drag image to be captured
     setTimeout(() => {
       if (dragNodeRef.current) {
         dragNodeRef.current.style.opacity = '0.5';
@@ -223,18 +208,14 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
     setDragOverIndex(null);
   };
 
-  // Load config and state templates on mount
   useEffect(() => {
-    // Load config
     loadConfig().then(loadedConfig => {
       setConfig(loadedConfig);
       
-      // Extract action types and params from config
       if (Object.keys(loadedConfig.actions).length > 0) {
         const types = Object.keys(loadedConfig.actions);
         setActionTypes(types);
         
-        // Build params from config (already parsed)
         const params: Record<string, ParamInfo[]> = {};
         const semicolons: Record<string, boolean> = {};
         for (const [name, data] of Object.entries(loadedConfig.actions)) {
@@ -245,12 +226,10 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
         setActionHasSemicolon(semicolons);
       }
       
-      // Extract rule types and params from config
       if (Object.keys(loadedConfig.rules).length > 0) {
         const types = Object.keys(loadedConfig.rules);
         setRuleTypes(types);
         
-        // Build params from config (already parsed)
         const params: Record<string, ParamInfo[]> = {};
         for (const [name, data] of Object.entries(loadedConfig.rules)) {
           params[name] = data.params;
@@ -259,46 +238,35 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
       }
     });
     
-    // Load state templates
     loadStateTemplates().then(templates => {
       setStateTemplates(templates);
     });
   }, []);
 
-  // Helper function to generate rawText for an action
   const generateActionRawText = (action: QuestAction): string => {
-    // Get param info to determine which params should be strings
     const paramInfos = actionParams[action.type] || [];
     
     const paramsStr = action.params.map((p, idx) => {
       const paramInfo = paramInfos[idx];
-      // If param info says it's a string type, wrap in quotes
-      // Otherwise, if it's already a string but should be an integer, don't wrap
       if (paramInfo?.type === 'string') {
         return `"${p}"`;
       } else {
-        // It's an integer type - return as-is (no quotes)
         return p;
       }
     }).join(', ');
     
-    // Check if this action type should have a semicolon
-    const hasSemicolon = actionHasSemicolon[action.type] ?? true; // Default to true
+    const hasSemicolon = actionHasSemicolon[action.type] ?? true; 
     return `${action.type}(${paramsStr})${hasSemicolon ? ';' : ''}`;
   };
 
-  // Helper function to generate rawText for a rule
   const generateRuleRawText = (rule: QuestRule): string => {
-    // Get param info to determine which params should be strings
     const paramInfos = ruleParams[rule.type] || [];
     
     const paramsStr = rule.params.map((p, idx) => {
       const paramInfo = paramInfos[idx];
-      // If param info says it's a string type, wrap in quotes
       if (paramInfo?.type === 'string') {
         return `"${p}"`;
       } else {
-        // It's an integer type - return as-is (no quotes)
         return p;
       }
     }).join(', ');
@@ -342,11 +310,9 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
       if (!sanitizedTemplateName) {
         return;
       }
-      
-      // Generate state template content
+
       let content = `desc "${editedState.description || ''}"\n`;
-      
-      // Use items array if present (preserves interleaved order)
+
       if (editedState.items && editedState.items.length > 0) {
         editedState.items.forEach(item => {
           if (item.kind === 'action') {
@@ -372,8 +338,8 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
         });
       }
       
-      const configDir = await window.electronAPI.getConfigDir();
-      const statesDir = `${configDir}/templates/states`;
+      const templatesDir = await window.electronAPI.getTemplatesDir();
+      const statesDir = `${templatesDir}/states`;
       const templateFileName = `${sanitizedTemplateName}.eqf`;
       const templatePath = `${statesDir}/${templateFileName}`;
       
@@ -387,16 +353,12 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
         throw new Error(`Failed to write file: ${writeResult.error}`);
       }
       
-      // Close dialog
       setSaveTemplateDialog({ open: false, templateName: '' });
-      
-      // Notify parent if callback provided (optional)
       if (onSaveAsTemplate) {
         onSaveAsTemplate(editedState);
       }
     } catch (err: any) {
       console.error('Error saving state template:', err);
-      // Keep dialog open on error so user can retry
     }
   };
 
@@ -405,7 +367,7 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
     const paramConfig = actionParams[defaultType] || [];
     const newAction: QuestAction = { 
       type: defaultType, 
-      params: paramConfig.map(() => ''), // Start with empty params
+      params: paramConfig.map(() => ''), 
       rawText: '' 
     };
     newAction.rawText = generateActionRawText(newAction);
@@ -444,11 +406,10 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
   const handleAddRule = () => {
     const defaultType = ruleTypes[0] || 'Always';
     const paramConfig = ruleParams[defaultType] || [];
-    // In template mode, use a placeholder goto state that can be changed later
     const defaultGotoState = isTemplateMode ? 'NextState' : '';
     const newRule: QuestRule = { 
       type: defaultType, 
-      params: paramConfig.map(() => ''), // Start with empty params
+      params: paramConfig.map(() => ''),
       gotoState: defaultGotoState, 
       rawText: '' 
     };
@@ -491,15 +452,12 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
       const newParams = [...item.data.params];
       const paramInfos = actionParams[item.data.type] || [];
       const paramInfo = paramInfos[paramIndex];
-      
-      // Parse based on expected type from config
       let parsedValue: string | number;
       if (paramInfo?.type === 'string') {
-        parsedValue = value; // Keep as string
+        parsedValue = value; 
       } else {
-        // Integer type - allow empty string, otherwise parse as number
         if (value.trim() === '') {
-          parsedValue = ''; // Allow empty
+          parsedValue = ''; 
         } else {
           parsedValue = !isNaN(Number(value)) ? Number(value) : value;
         }
@@ -513,15 +471,12 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
       const newParams = [...item.data.params];
       const paramInfos = ruleParams[item.data.type] || [];
       const paramInfo = paramInfos[paramIndex];
-      
-      // Parse based on expected type from config
       let parsedValue: string | number;
       if (paramInfo?.type === 'string') {
-        parsedValue = value; // Keep as string
+        parsedValue = value; 
       } else {
-        // Integer type - allow empty string, otherwise parse as number
         if (value.trim() === '') {
-          parsedValue = ''; // Allow empty
+          parsedValue = ''; 
         } else {
           parsedValue = !isNaN(Number(value)) ? Number(value) : value;
         }
@@ -537,7 +492,6 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
     syncUnifiedToState(newItems);
   };
 
-  // Get description for an action or rule from config
   const getDescription = (type: 'action' | 'rule', name: string): string | null => {
     if (!config) return null;
     if (type === 'action') {
@@ -673,7 +627,6 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
                       items: newItems
                     });
                     setUnifiedItems(newItems);
-                    // Reset the select
                     e.target.value = '';
                   }
                 }}
@@ -817,8 +770,6 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
             const borderColor = isAction ? '#4caf50' : '#2196f3';
             const isDragging = draggedIndex === index;
             const isDragOver = dragOverIndex === index && draggedIndex !== index;
-            
-            // Determine if the drop would place the item above or below current position
             const wouldDropAbove = draggedIndex !== null && draggedIndex > index;
             
             return (
@@ -1009,7 +960,6 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
                     )}
                   </>
                 ) : (
-                  // Rule Item
                   <>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
                       <div 
@@ -1085,7 +1035,6 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
                           Goto State
                         </label>
                         {isTemplateMode ? (
-                          // In template mode, show a text input for the goto state
                           <input
                             type="text"
                             value={(item.data as QuestRule).gotoState}
@@ -1103,24 +1052,20 @@ export default function StateNodeEditor({ state, stateIndex, originalStateName, 
                             }}
                           />
                         ) : (
-                          // In quest mode, show a dropdown to select existing states
                           <select
                             value={(item.data as QuestRule).gotoState}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (value === '__NEW_STATE__') {
-                                // Generate a unique new state name
                                 let counter = 1;
                                 let newStateName = `NewState${counter}`;
                                 while (allStates.some(s => s.name === newStateName) || editedState.name === newStateName) {
                                   counter++;
                                   newStateName = `NewState${counter}`;
                                 }
-                                // Create the new state if callback is provided
                                 if (onCreateState) {
                                   onCreateState(newStateName);
                                 }
-                                // Set the rule to go to this new state
                                 handleUpdateRule(index, 'gotoState', newStateName);
                               } else {
                                 handleUpdateRule(index, 'gotoState', value);

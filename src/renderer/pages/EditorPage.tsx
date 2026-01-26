@@ -128,10 +128,7 @@ const EditorPage: React.FC<EditorPageProps> = ({
   };
 
   const [templateSaveStatus, setTemplateSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-
-  // Callback when a state is saved as template (from StateNodeEditor)
   const handleSaveStateAsTemplate = (_state: QuestState) => {
-    // Clear cache so the new template shows up in the templates list
     clearStateTemplatesCache();
   };
 
@@ -151,8 +148,7 @@ const EditorPage: React.FC<EditorPageProps> = ({
       setTemplateSaveStatus('saving');
       
       const eqfContent = generateEQFContent(questData);
-      const configDir = await window.electronAPI.getConfigDir();
-      const templatesDir = `${configDir}/templates`;
+      const templatesDir = await window.electronAPI.getTemplatesDir();
       const templateFileName = `${sanitizedTemplateName}.eqf`;
       const templatePath = `${templatesDir}/${templateFileName}`;
       
@@ -188,8 +184,6 @@ const EditorPage: React.FC<EditorPageProps> = ({
     questData.states.forEach(state => {
       content += `State ${state.name}\n{\n`;
       content += `    desc "${state.description}"\n`;
-      
-      // Use items array if present (preserves interleaved order), otherwise fall back to actions then rules
       if (state.items && state.items.length > 0) {
         state.items.forEach(item => {
           if (item.kind === 'action') {
@@ -300,9 +294,9 @@ const EditorPage: React.FC<EditorPageProps> = ({
         {activeTab === 'credits' ? (
           <CreditsPage theme={theme} />
         ) : activeTab === 'actions' ? (
-          <ActionsEditorPage theme={theme} />
+          <ActionsEditorPage theme={theme} projectPath={currentProject} />
         ) : activeTab === 'rules' ? (
-          <RulesEditorPage theme={theme} />
+          <RulesEditorPage theme={theme} projectPath={currentProject} />
         ) : activeTab === 'questTemplates' ? (
           <QuestTemplatesPage theme={theme} />
         ) : activeTab === 'stateTemplates' ? (

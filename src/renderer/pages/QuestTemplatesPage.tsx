@@ -28,7 +28,6 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
   const loadTemplatesData = async () => {
     try {
       setLoading(true);
-      // Clear cache to ensure we get fresh data
       clearTemplatesCache();
       const loadedTemplates = await loadTemplates();
       setTemplates(loadedTemplates);
@@ -41,7 +40,6 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
     }
   };
 
-  // Load templates on mount and whenever the component is rendered
   useEffect(() => {
     loadTemplatesData();
   }, []);
@@ -86,27 +84,17 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
     }
     
     try {
-      // Merge updates with current quest
       const questData = { ...currentQuest, ...updates } as QuestData;
-      
-      // Update the current quest state so the editor reflects the changes
       setCurrentQuest(questData);
-      
-      // Save to file
       const eqfContent = generateEQFContent(questData);
-      const configDir = await window.electronAPI.getConfigDir();
-      const templatesDir = `${configDir}/templates`;
+      const templatesDir = await window.electronAPI.getTemplatesDir();
       const templateFileName = `${templateName}.eqf`;
       const templatePath = `${templatesDir}/${templateFileName}`;
       
       await window.electronAPI.writeTextFile(templatePath, eqfContent);
-      
-      // Refresh the templates list in the background (don't close editor)
       clearTemplatesCache();
       loadTemplates().then(setTemplates);
-      
-      // Don't close the editor - just show a brief success indication
-      // The user can continue editing or manually close when done
+
     } catch (err) {
       setError(`Failed to save template: ${err instanceof Error ? err.message : 'Unknown error'}`);
       console.error('Error saving template:', err);
@@ -193,8 +181,7 @@ const QuestTemplatesPage: React.FC<QuestTemplatesPageProps> = ({ theme }) => {
     }
     
     try {
-      const configDir = await window.electronAPI.getConfigDir();
-      const templatesDir = `${configDir}/templates`;
+      const templatesDir = await window.electronAPI.getTemplatesDir();
       const templatePath = `${templatesDir}/${templateFileName}`;
       
       await window.electronAPI.deleteFile(templatePath);

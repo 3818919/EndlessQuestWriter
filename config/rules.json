@@ -1,0 +1,183 @@
+{
+  "TalkedToNpc": {
+    "description": "Satisfied when the player opens a dialog with the specified NPC.",
+    "params": [
+      { "name": "npcQuestId", "type": "integer" }
+    ]
+  },
+  "InputNpc": {
+    "description": "Satisfied when the player clicks a dialog link with the specified input ID. Use with AddNpcInput().",
+    "params": [
+      { "name": "inputId", "type": "integer" }
+    ]
+  },
+  "KilledNpcs": {
+    "description": "Satisfied when the player has killed the specified amount of NPCs.",
+    "params": [
+      { "name": "npcId", "type": "integer" },
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "KilledPlayers": {
+    "description": "Satisfied when the player has killed the specified amount of players in PK zones.",
+    "params": [
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "GotItems": {
+    "description": "Satisfied when the player has the specified amount of items in their inventory.",
+    "params": [
+      { "name": "itemId", "type": "integer" },
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "LostItems": {
+    "description": "Satisfied if player loses required items. Use after GotItems() to verify they still have items.",
+    "params": [
+      { "name": "itemId", "type": "integer" },
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "Rolled": {
+    "description": "Satisfied if the player rolls value.",
+    "params": [
+      { "name": "roll amount", "type": "integer" }
+    ]
+  },
+  "UsedItem": {
+    "description": "Satisfied when the player has used the specified item the required number of times.",
+    "params": [
+      { "name": "itemId", "type": "integer" },
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "EnterCoord": {
+    "description": "Satisfied when the player stands on the specified map coordinates.",
+    "params": [
+      { "name": "mapId", "type": "integer" },
+      { "name": "x", "type": "integer" },
+      { "name": "y", "type": "integer" }
+    ]
+  },
+  "LeaveCoord": {
+    "description": "Satisfied when the player leaves the specified map coordinates.",
+    "params": [
+      { "name": "mapId", "type": "integer" },
+      { "name": "x", "type": "integer" },
+      { "name": "y", "type": "integer" }
+    ]
+  },
+  "EnterMap": {
+    "description": "Satisfied when the player enters the specified map.",
+    "params": [
+      { "name": "mapId", "type": "integer" }
+    ]
+  },
+  "LeaveMap": {
+    "description": "Satisfied when the player leaves the specified map.",
+    "params": [
+      { "name": "mapId", "type": "integer" }
+    ]
+  },
+  "IsClass": {
+    "description": "Satisfied if the player's class matches the specified class ID.",
+    "params": [
+      { "name": "classId", "type": "integer" }
+    ]
+  },
+  "IsRace": {
+    "description": "Satisfied if the player's race matches the specified race ID.",
+    "params": [
+      { "name": "raceId", "type": "integer" }
+    ]
+  },
+  "IsGender": {
+    "description": "Satisfied if the player's gender matches the specified ID (0=male, 1=female).",
+    "params": [
+      { "name": "genderId", "type": "integer" }
+    ]
+  },
+  "CitizenOf": {
+    "description": "Satisfied if the player is a citizen of the specified home town.",
+    "params": [
+      { "name": "homeName", "type": "integer" }
+    ]
+  },
+  "GotSpell": {
+    "description": "Satisfied when the player has learned the specified spell.",
+    "params": [
+      { "name": "spellId", "type": "integer" }
+    ]
+  },
+  "LostSpell": {
+    "description": "Satisfied if player does not have a spell.",
+    "params": [
+      { "name": "spellId", "type": "integer" }
+    ]
+  },
+  "UsedSpell": {
+    "description": "Satisfied when the player has cast the specified spell the required number of times.",
+    "params": [
+      { "name": "spellId", "type": "integer" },
+      { "name": "amount", "type": "integer" }
+    ]
+  },
+  "IsWearing": {
+    "description": "Satisfied if the player has the specified item equipped.",
+    "params": [
+      { "name": "itemId", "type": "integer" }
+    ]
+  },
+  "StatGreater": {
+    "description": "Satisfied if the player's stat is above the specified value: CON, level, class, admin, etc..",
+    "params": [
+      { "name": "statName", "type": "string" },
+      { "name": "value", "type": "integer" }
+    ]
+  },
+  "StatLess": {
+    "description": "Satisfied if the player's stat is below the specified value: CON, level, class, admin, etc..",
+    "params": [
+      { "name": "statName", "type": "string" },
+      { "name": "value", "type": "integer" }
+    ]
+  },
+  "StatIs": {
+    "description": "Satisfied if the player's stat is exactly the specified value: CON, level, class, admin, etc..",
+    "params": [
+      { "name": "statName", "type": "string" },
+      { "name": "value", "type": "integer" }
+    ]
+  },
+  "StatNot": {
+    "description": "Satisfied if the player's stat is not the specified value: CON, level, class, admin, etc..",
+    "params": [
+      { "name": "statName", "type": "string" },
+      { "name": "value", "type": "integer" }
+    ]
+  },
+  "StatBetween": {
+    "description": "Satisfied if the player's stat is between the specified values: CON, level, class, admin, etc..",
+    "params": [
+      { "name": "statName", "type": "string" },
+      { "name": "low_value", "type": "integer" },
+      { "name": "high_value", "type": "integer" }
+    ]
+  },
+  "StatRpn": {
+    "description": "Satisfied if the player's stats match the formula.",
+    "params": [
+      { "name": "Reverse Polish Notion Formula", "type": "string" }
+    ]
+  },
+  "DoneDaily": {
+    "description": "Rule satisfied if quest is completed x times in 1 day.",
+    "params": [
+      { "name": "value", "type": "integer" }
+    ]
+  },
+  "Always": {
+    "description": "Always goto state",
+    "params": []
+  }
+}

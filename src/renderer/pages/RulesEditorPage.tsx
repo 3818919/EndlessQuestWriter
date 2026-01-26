@@ -29,7 +29,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import { loadConfig, clearConfigCache, ActionOrRuleDoc, ParamInfo } from '../services/configService';
+import { loadConfig, clearConfigCache, saveRulesConfig, ActionOrRuleDoc, ParamInfo } from '../services/configService';
 
 interface ParamEditor {
   name: string;
@@ -39,19 +39,17 @@ interface ParamEditor {
 
 interface RulesEditorPageProps {
   theme: 'dark' | 'light';
+  projectPath?: string;
 }
 
-const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
+const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme, projectPath }) => {
   const [rules, setRules] = useState<Record<string, ActionOrRuleDoc>>({});
   const [ruleOrder, setRuleOrder] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
-  // Drag and drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<string | null>(null);
   const [ruleName, setRuleName] = useState('');
@@ -62,13 +60,13 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
   
   useEffect(() => {
     loadRules();
-  }, []);
+  }, [projectPath]);
   
   const loadRules = async () => {
     try {
       setLoading(true);
-      clearConfigCache();
-      const config = await loadConfig();
+      clearConfigCache(projectPath);
+      const config = await loadConfig(projectPath);
       setRules(config.rules);
       // Preserve order from file (Object.keys maintains insertion order)
       setRuleOrder(Object.keys(config.rules));
@@ -151,54 +149,34 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
       return;
     }
     
+    if (!projectPath) {
+      setError('No project selected. Please select a project first.');
+      return;
+    }
+    
     try {
-      const configDir = await window.electronAPI.getConfigDir();
-      const rulesPath = `${configDir}/rules.ini`;
-      
-      const result = await window.electronAPI.readTextFile(rulesPath);
-      let content = result.success && result.data ? result.data : '';
-      
       const signature = generateSignature(ruleName, params);
-      const newSection = `[${ruleName}]\nsignature = \`${signature}\`\ndescription = ${description}`;
+      const newRule: ActionOrRuleDoc = {
+        signature: signature,
+        description: description.trim(),
+        params: params.map(p => ({ name: p.name, type: p.type })),
+        rawSignature: `\`${signature}\``
+      };
+
+      const newRules = { ...rules };
       
-      if (editingRule && rules[editingRule]) {
-        // Update in place - replace the existing section
-        const lines = content.split('\n');
-        const newLines: string[] = [];
-        let skipSection = false;
-        let replacedSection = false;
-        
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          const trimmed = line.trim();
-          const sectionMatch = trimmed.match(/^\[([^\]]+)\]$/);
-          
-          if (sectionMatch) {
-            if (sectionMatch[1] === editingRule) {
-              // Found the section to replace - insert new content here
-              skipSection = true;
-              replacedSection = true;
-              newLines.push(newSection);
-              continue;
-            } else {
-              skipSection = false;
-            }
-          }
-          
-          if (!skipSection) {
-            newLines.push(line);
-          }
-        }
-        
-        content = newLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-      } else {
-        // Add new entry at the end
-        content = content.trim() + '\n\n' + newSection;
+      if (editingRule && editingRule !== ruleName) {
+        delete newRules[editingRule];
+        const newOrder = ruleOrder.map(name => name === editingRule ? ruleName : name);
+        setRuleOrder(newOrder);
+      } else if (!editingRule) {
+        setRuleOrder([...ruleOrder, ruleName]);
       }
       
-      await window.electronAPI.writeTextFile(rulesPath, content);
-      clearConfigCache();
-      await loadRules();
+      newRules[ruleName] = newRule;
+      setRules(newRules);
+
+      await saveRulesConfig(projectPath, newRules);
       
       setSuccessMessage(editingRule ? 'Rule updated successfully!' : 'Rule added successfully!');
       handleCloseDialog();
@@ -208,32 +186,28 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
     }
   };
   
-  // Save the entire file with new order
   const saveRulesInOrder = async (orderedNames: string[]) => {
+    if (!projectPath) {
+      setError('No project selected');
+      return;
+    }
+    
     try {
-      const configDir = await window.electronAPI.getConfigDir();
-      const rulesPath = `${configDir}/rules.ini`;
-      
-      // Build the file content in the new order
-      const sections: string[] = [];
+      const orderedRules: Record<string, ActionOrRuleDoc> = {};
       for (const name of orderedNames) {
-        const rule = rules[name];
-        if (rule) {
-          sections.push(`[${name}]\nsignature = ${rule.rawSignature}\ndescription = ${rule.description}`);
+        if (rules[name]) {
+          orderedRules[name] = rules[name];
         }
       }
       
-      const content = sections.join('\n\n');
-      await window.electronAPI.writeTextFile(rulesPath, content);
-      clearConfigCache();
+      await saveRulesConfig(projectPath, orderedRules);
       setSuccessMessage('Rules reordered successfully!');
     } catch (err) {
       setError('Failed to save rule order. Please try again.');
       console.error('Error saving rule order:', err);
     }
   };
-  
-  // Drag handlers
+
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
   };
@@ -256,8 +230,7 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
       setDragOverIndex(null);
       return;
     }
-    
-    // Reorder the array
+
     const newOrder = [...ruleOrder];
     const [draggedItem] = newOrder.splice(draggedIndex, 1);
     newOrder.splice(dropIndex, 0, draggedItem);
@@ -265,8 +238,7 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
     setRuleOrder(newOrder);
     setDraggedIndex(null);
     setDragOverIndex(null);
-    
-    // Save the new order to file
+
     await saveRulesInOrder(newOrder);
   };
   
@@ -275,53 +247,26 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
     setDragOverIndex(null);
   };
   
-  const handleDeleteRule = async (ruleName: string) => {
-    if (!confirm(`Are you sure you want to delete rule "${ruleName}"?`)) {
+  const handleDeleteRule = async (ruleNameToDelete: string) => {
+    if (!confirm(`Are you sure you want to delete rule "${ruleNameToDelete}"?`)) {
+      return;
+    }
+    
+    if (!projectPath) {
+      setError('No project selected');
       return;
     }
     
     try {
-      const configDir = await window.electronAPI.getConfigDir();
-      const rulesPath = `${configDir}/rules.ini`;
+      const newRules = { ...rules };
+      delete newRules[ruleNameToDelete];
       
-      const result = await window.electronAPI.readTextFile(rulesPath);
-      if (!result.success || !result.data) {
-        throw new Error('Failed to read rules file');
-      }
+      const newOrder = ruleOrder.filter(name => name !== ruleNameToDelete);
       
-      // Parse the INI file and remove the section
-      const lines = result.data.split('\n');
-      const newLines: string[] = [];
-      let skipSection = false;
+      setRules(newRules);
+      setRuleOrder(newOrder);
       
-      for (const line of lines) {
-        const trimmed = line.trim();
-        
-        // Check if this is a section header
-        const sectionMatch = trimmed.match(/^\[([^\]]+)\]$/);
-        if (sectionMatch) {
-          if (sectionMatch[1] === ruleName) {
-            // Start skipping this section
-            skipSection = true;
-            continue;
-          } else {
-            // New section, stop skipping
-            skipSection = false;
-          }
-        }
-        
-        if (!skipSection) {
-          newLines.push(line);
-        }
-      }
-      
-      // Clean up extra blank lines
-      let content = newLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-      
-      await window.electronAPI.writeTextFile(rulesPath, content);
-      clearConfigCache();
-      await loadRules();
-      
+      await saveRulesConfig(projectPath, newRules);
       setSuccessMessage('Rule deleted successfully!');
     } catch (err) {
       setError('Failed to delete rule. Please try again.');
@@ -333,6 +278,17 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
     return (
       <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
         <Typography>Loading rules...</Typography>
+      </Box>
+    );
+  }
+  
+  if (!projectPath) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', flexDirection: 'column', gap: 2 }}>
+        <Typography variant="h6" sx={{ color: 'var(--text-secondary)' }}>No Project Selected</Typography>
+        <Typography sx={{ color: 'var(--text-tertiary)' }}>
+          Please select a project to edit its rules configuration.
+        </Typography>
       </Box>
     );
   }
@@ -374,7 +330,7 @@ const RulesEditorPage: React.FC<RulesEditorPageProps> = ({ theme }) => {
         mb: 3, 
         color: 'var(--text-secondary)' 
       }}>
-        Manage quest rules that can be used in quest scripts. Rules are defined in config/rules.ini.
+        Manage quest rules for this project. Rules are stored in the project's rules.json file.
       </Typography>
       
       {error && (

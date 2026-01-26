@@ -635,10 +635,39 @@ export default function QuestFlowDiagram({ quest, onQuestChange, onNavigateToSta
           return action;
         });
         
+        let updatedItems = state.items;
+        if (state.items && state.items.length > 0) {
+          updatedItems = state.items.map(item => {
+            if (item.kind === 'rule' && item.data.gotoState === oldName) {
+              const rule = item.data;
+              const paramsStr = rule.params.map(p => 
+                typeof p === 'string' ? `"${p}"` : p
+              ).join(', ');
+              const rawText = `${rule.type}(${paramsStr}) goto ${newName}`;
+              return { ...item, data: { ...rule, gotoState: newName, rawText } };
+            }
+            if (item.kind === 'action' && 
+                (item.data.type === 'SetState' || item.data.type === 'Goto') && 
+                item.data.params.length > 0 && 
+                item.data.params[0] === oldName) {
+              const action = item.data;
+              const newParams = [...action.params];
+              newParams[0] = newName;
+              const paramsStr = newParams.map(p => 
+                typeof p === 'string' ? `"${p}"` : p
+              ).join(', ');
+              const rawText = `${action.type}(${paramsStr})`;
+              return { ...item, data: { ...action, params: newParams, rawText } };
+            }
+            return item;
+          });
+        }
+        
         newStates[idx] = {
           ...newStates[idx],
           rules: updatedRules,
-          actions: updatedActions
+          actions: updatedActions,
+          items: updatedItems
         };
       });
     }

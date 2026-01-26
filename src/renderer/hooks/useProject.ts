@@ -35,11 +35,12 @@ function replaceNpcQuestIds(quest: QuestData, questId: number): QuestData {
   };
 }
 
-export type TabType = 'quests' | 'credits';
+type QuestsPathType = 'server-root' | 'quests-direct';
 
 interface ProjectConfig {
   name: string;
   serverPath: string;
+  questsPathType?: QuestsPathType; 
   createdAt: string;
   lastModified: string;
 }
@@ -52,6 +53,7 @@ interface UseProjectReturn {
   currentProject: string;
   projectName: string;
   serverPath: string;
+  questsPathType: QuestsPathType;
   linkProject: (projectName: string, serverPath: string) => Promise<void>;
   selectProject: (projectName: string) => Promise<ProjectData | null>;
   deleteProject: (projectName: string) => Promise<void>;
@@ -71,6 +73,7 @@ export const useProject = (): UseProjectReturn => {
   const [currentProject, setCurrentProject] = useState('');
   const [projectName, setProjectName] = useState('');
   const [serverPath, setServerPath] = useState('');
+  const [questsPathType, setQuestsPathType] = useState<QuestsPathType>('server-root');
   const [appDataDir, setAppDataDir] = useState('');
   
 
@@ -92,14 +95,35 @@ export const useProject = (): UseProjectReturn => {
   }, []);
 
   const getQuestsPath = useCallback(() => {
-    return serverPath ? `${serverPath}/data/quests` : '';
-  }, [serverPath]);
+    if (!serverPath) return '';
+    return questsPathType === 'quests-direct' ? serverPath : `${serverPath}/data/quests`;
+  }, [serverPath, questsPathType]);
+
+  const detectQuestsPathType = useCallback(async (selectedPath: string): Promise<{ pathType: QuestsPathType; questsDir: string }> => {
+    if (!window.electronAPI) {
+      return { pathType: 'quests-direct', questsDir: selectedPath };
+    }
+
+    const directListResult = await window.electronAPI.listFiles(selectedPath, '.eqf');
+    if (directListResult.success && directListResult.files.length > 0) {
+      return { pathType: 'quests-direct', questsDir: selectedPath };
+    }
+
+    const serverRootQuestsPath = `${selectedPath}/data/quests`;
+    const serverRootExists = await window.electronAPI.fileExists(serverRootQuestsPath);
+    
+    if (serverRootExists) {
+      return { pathType: 'server-root', questsDir: serverRootQuestsPath };
+    }
+
+    return { pathType: 'quests-direct', questsDir: selectedPath };
+  }, []);
 
 
   const loadAllQuests = useCallback(async (): Promise<Record<number, QuestData>> => {
     if (!serverPath || !window.electronAPI) return {};
 
-    const questsDir = `${serverPath}/data/quests`;
+    const questsDir = getQuestsPath();
     const quests: Record<number, QuestData> = {};
     
     try {
@@ -152,7 +176,7 @@ export const useProject = (): UseProjectReturn => {
       console.error('Error loading quests:', error);
       return {};
     }
-  }, [serverPath]);
+  }, [serverPath, getQuestsPath]);
 
   const linkProject = useCallback(async (projectName: string, serverPath: string) => {
     if (!appDataDir || !isElectron || !window.electronAPI) {
@@ -164,12 +188,17 @@ export const useProject = (): UseProjectReturn => {
       throw new Error('Project name contains invalid characters.');
     }
 
+    // Auto-detect quests path type
+    const detected = await detectQuestsPathType(serverPath);
+    const finalPathType = detected.pathType;
+
     const projectFolder = `${appDataDir}/${projectName}`;
     await window.electronAPI.ensureDir(projectFolder);
 
     const config: ProjectConfig = {
       name: projectName,
       serverPath: serverPath,
+      questsPathType: finalPathType,
       createdAt: new Date().toISOString(),
       lastModified: new Date().toISOString()
     };
@@ -181,14 +210,38 @@ export const useProject = (): UseProjectReturn => {
       throw new Error(result.error);
     }
 
-    const questsDir = `${serverPath}/data/quests`;
+    const bundledConfigDir = await window.electronAPI.getBundledConfigDir();
+    const projectActionsPath = `${projectFolder}/actions.json`;
+    const projectActionsExists = await window.electronAPI.fileExists(projectActionsPath);
+    if (!projectActionsExists) {
+      const bundledActionsPath = `${bundledConfigDir}/actions.json`;
+      const bundledActionsResult = await window.electronAPI.readTextFile(bundledActionsPath);
+      if (bundledActionsResult.success && bundledActionsResult.data) {
+        await window.electronAPI.writeTextFile(projectActionsPath, bundledActionsResult.data);
+        console.log('Copied default actions.json to project');
+      }
+    }
+    
+    const projectRulesPath = `${projectFolder}/rules.json`;
+    const projectRulesExists = await window.electronAPI.fileExists(projectRulesPath);
+    if (!projectRulesExists) {
+      const bundledRulesPath = `${bundledConfigDir}/rules.json`;
+      const bundledRulesResult = await window.electronAPI.readTextFile(bundledRulesPath);
+      if (bundledRulesResult.success && bundledRulesResult.data) {
+        await window.electronAPI.writeTextFile(projectRulesPath, bundledRulesResult.data);
+        console.log('Copied default rules.json to project');
+      }
+    }
+
+    const questsDir = finalPathType === 'quests-direct' ? serverPath : `${serverPath}/data/quests`;
     await window.electronAPI.ensureDir(questsDir);
 
     setCurrentProject(projectFolder);
     setProjectName(projectName);
     setServerPath(serverPath);
+    setQuestsPathType(finalPathType);
     questIdsCache.current = new Set();
-  }, [appDataDir]);
+  }, [appDataDir, detectQuestsPathType]);
 
   const selectProject = useCallback(async (projectName: string): Promise<ProjectData | null> => {
     if (!appDataDir || !isElectron || !window.electronAPI) return null;
@@ -196,7 +249,6 @@ export const useProject = (): UseProjectReturn => {
     try {
       const projectFolder = `${appDataDir}/${projectName}`;
       
-    
       const configPath = `${projectFolder}/config.json`;
       const configResult = await window.electronAPI.readTextFile(configPath);
       if (!configResult.success) {
@@ -204,18 +256,51 @@ export const useProject = (): UseProjectReturn => {
       }
       
       const config: ProjectConfig = JSON.parse(configResult.data);
+      let pathType: QuestsPathType = config.questsPathType || 'server-root';
+      if (!config.questsPathType) {
+        const detected = await detectQuestsPathType(config.serverPath);
+        if (detected) {
+          pathType = detected.pathType;
+          // Save the detected path type to config
+          config.questsPathType = pathType;
+          config.lastModified = new Date().toISOString();
+          await window.electronAPI.writeTextFile(configPath, JSON.stringify(config, null, 2));
+          console.log(`Migrated: Auto-detected questsPathType as '${pathType}'`);
+        }
+      }
       
-    
+      const bundledConfigDir = await window.electronAPI.getBundledConfigDir();
+      
+      const projectActionsPath = `${projectFolder}/actions.json`;
+      const projectActionsExists = await window.electronAPI.fileExists(projectActionsPath);
+      if (!projectActionsExists) {
+        const bundledActionsPath = `${bundledConfigDir}/actions.json`;
+        const bundledActionsResult = await window.electronAPI.readTextFile(bundledActionsPath);
+        if (bundledActionsResult.success && bundledActionsResult.data) {
+          await window.electronAPI.writeTextFile(projectActionsPath, bundledActionsResult.data);
+          console.log('Migrated: Copied default actions.json to project');
+        }
+      }
+      
+      const projectRulesPath = `${projectFolder}/rules.json`;
+      const projectRulesExists = await window.electronAPI.fileExists(projectRulesPath);
+      if (!projectRulesExists) {
+        const bundledRulesPath = `${bundledConfigDir}/rules.json`;
+        const bundledRulesResult = await window.electronAPI.readTextFile(bundledRulesPath);
+        if (bundledRulesResult.success && bundledRulesResult.data) {
+          await window.electronAPI.writeTextFile(projectRulesPath, bundledRulesResult.data);
+          console.log('Migrated: Copied default rules.json to project');
+        }
+      }
+      
       setCurrentProject(projectFolder);
       setProjectName(projectName);
       setServerPath(config.serverPath);
+      setQuestsPathType(pathType);
       localStorage.setItem('currentProject', projectName);
       
-    
       await window.electronAPI.setTitle(`Quest Editor - ${projectName}`);
-      
-    
-      const questsDir = `${config.serverPath}/data/quests`;
+      const questsDir = pathType === 'quests-direct' ? config.serverPath : `${config.serverPath}/data/quests`;
       const questsDirExists = await window.electronAPI.fileExists(questsDir);
       
       let quests: Record<number, QuestData> = {};
@@ -275,9 +360,10 @@ export const useProject = (): UseProjectReturn => {
     }
 
     const config = JSON.parse(configResult.data);
+    let newProjectPath = currentProject;
     
     if (settings.projectName && settings.projectName !== config.name) {
-      const newProjectPath = `${appDataDir}/${settings.projectName}`;
+      newProjectPath = `${appDataDir}/${settings.projectName}`;
       const exists = await window.electronAPI.pathExists(newProjectPath);
       if (exists) {
         throw new Error(`A project named "${settings.projectName}" already exists`);
@@ -292,20 +378,24 @@ export const useProject = (): UseProjectReturn => {
     if (settings.serverPath !== undefined) {
       config.serverPath = settings.serverPath;
       setServerPath(settings.serverPath);
+      const detected = await detectQuestsPathType(settings.serverPath);
+      config.questsPathType = detected.pathType;
+      setQuestsPathType(detected.pathType);
+      
       questIdsCache.current = new Set();
     }
     
     config.lastModified = new Date().toISOString();
     
     const writeResult = await window.electronAPI.writeTextFile(
-      `${currentProject}/config.json`,
+      `${newProjectPath}/config.json`,
       JSON.stringify(config, null, 2)
     );
     
     if (!writeResult.success) {
       throw new Error(`Failed to save config: ${writeResult.error}`);
     }
-  }, [currentProject, appDataDir]);
+  }, [currentProject, appDataDir, detectQuestsPathType]);
 
   const deleteProject = useCallback(async (projectName: string) => {
     if (!appDataDir || !isElectron || !window.electronAPI) return;
@@ -317,6 +407,7 @@ export const useProject = (): UseProjectReturn => {
         setCurrentProject('');
         setProjectName('');
       setServerPath('');
+      setQuestsPathType('server-root');
       questIdsCache.current = new Set();
         localStorage.removeItem('currentProject');
       await window.electronAPI.setTitle('Quest Editor');
@@ -584,6 +675,7 @@ export const useProject = (): UseProjectReturn => {
     currentProject,
     projectName,
     serverPath,
+    questsPathType,
     linkProject,
     selectProject,
     deleteProject,

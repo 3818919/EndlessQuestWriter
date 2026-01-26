@@ -1,0 +1,6 @@
+	desc	"Kill 10 monsters"
+
+	action	AddNpcText(QUEST_ID, "Go defeat 10 monsters and return to me.");
+
+	rule	KilledNpcs(1, 10) goto ReturnToNPC
+	rule	TalkedToNpc(QUEST_ID) goto KillMonsters
